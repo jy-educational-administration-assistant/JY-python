@@ -1,13 +1,25 @@
 ﻿from __future__ import absolute_import, unicode_literals
 from flask import Flask, request, jsonify, redirect
 from school_api import SchoolClient
+from weixin import WeChat, RedisUse
+import time
+import hashlib
 import urllib.request
 import urllib.parse
 import json
-from weixin import WX
 
 app = Flask(__name__)
 school = SchoolClient('http://jws.hebiace.edu.cn/default2.aspx')
+
+
+@app.route('/get_info')
+def get_info():
+    # 获取存用户信息
+    # http://127.0.0.1:5000/get_info?account=20173250131&passwd=350426yyq
+    account = request.args.get("account")
+    passwd = request.args.get("passwd")
+    user = school.user_login(account, passwd)
+    return jsonify(user.get_info())
 
 
 @app.route('/get_score')
@@ -17,19 +29,8 @@ def get_score():
     account = request.args.get("account")
     passwd = request.args.get("passwd")
     user = school.user_login(account, passwd)
-    school_data = user.get_score(use_api=3)
+    school_data = user.get_score(score_year='2018-2019', score_term='2', use_api=3)
     return jsonify(school_data)
-
-
-@app.route('/get_student_info')
-def get_student_info():
-    # 获取学生个人信息
-    # http://127.0.0.1:5000/get_student_info?account=20173400117&passwd=130132wzf
-    account = request.args.get("account")
-    passwd = request.args.get("passwd")
-    user = school.user_login(account, passwd)
-    student_info = user.get_student_info()
-    return jsonify(student_info)
 
 
 @app.route('/get_schedule')
@@ -51,41 +52,41 @@ def setCode():
     pre_url = 'http://api.qihaoyu.tech/jws/getcode'
     scope = 'snsapi_userinfo'
     again_url = '?validate=userinfo&url=http://api.qihaoyu..tech/jws/setcode'
-    wx = WX()
+    wx = WeChat()
     weixin = wx.setCode(pre_url, scope, again_url)
     return redirect(weixin)
 
 
 @app.route('/getcode')
 def getCode():
-    # appID = "wx1b26e33bc6d53859"
-    # AppSecret = "fd82140b782c9508b76fa276f13a8d44"
-    # url_code = "https://api.weixin.qq.com/sns/oauth2/access_token?appid={appid}&secret={appsecret}&code={code}&grant_type=authorization_code"
-    # url_retoken = "https://api.weixin.qq.com/sns/oauth2/refresh_token?appid={appid}&grant_type=refresh_token&refresh_token={refresh_token}"
-    # url_info = "https://api.weixin.qq.com/sns/userinfo?access_token={access_token}&openid={openid}&lang=zh_CN"
-    # code = request.args.get('code')
-    # if code:
-    #     accessToken = urllib.request.Request(url_code.format(appid=appID, appsecret=AppSecret, code=code))
-    #     res_data = urllib.request.urlopen(accessToken)
-    #     res = res_data.read().decode('utf-8')
-    #     res_json = json.loads(res)#转成json
-    #     access_token = res_json["access_token"]
-    #     refresh_token = res_json["refresh_token"]
-    #     openid = res_json["openid"]
-    #     getRefreshToken = urllib.request.Request(url_retoken.format(appid=appID, refresh_token=refresh_token))
-    #     res_data = urllib.request.urlopen(getRefreshToken)
-    #     res_reToken = res_data.read().decode('utf-8')
-    #     res_json = json.loads(res_reToken)  # 转成json
-    #     access_token = res_json["access_token"]
-    #     getUserInfo = urllib.request.Request(url_info.format(access_token=access_token, openid=openid))
-    #     res_data = urllib.request.urlopen(getUserInfo)
-    #     res = res_data.read().decode('utf-8')
         code = request.args.get('code')
         again_url = request.args.get('url')
-        wx = WX()
+        wx = WeChat()
+        sr = RedisUse()
         res = wx.getCode(code)
-        return json.dumps(res+again_url)
+        if res:
+                # return json.dumps(res)
+            openid = res['openid']
+            token = hashlib.md5(openid+time.time())
+            redis_result = sr.insertTokenOpenid(token, openid)
+            if redis_result:
+                url = 'http://myserver.qihaoyu.tech?token={token}'.format(token=token)
+                return redirect(url)
+            else:
+                data = {
+                    'code': 1,
+                    'msg': 'redis数据库错误，请联系管理员'
+                }
+                return jsonify(data)
+        else:
+            redirect(again_url)
 
+
+@app.route('/user_binding', methods=['POST'])
+def user_binding():
+    token = request.form('token')
+    student_id = request.form('student_id')
+    password = request.form('password')
 
 
 if __name__ == '__main__':
