@@ -1,4 +1,4 @@
-﻿from __future__ import absolute_import, unicode_literals
+from __future__ import absolute_import, unicode_literals
 from flask import Flask, request, jsonify, redirect
 from school_api import SchoolClient
 from weixin import WeChat, RedisUse
@@ -12,14 +12,15 @@ app = Flask(__name__)
 school = SchoolClient('http://jws.hebiace.edu.cn/default2.aspx')
 
 
-@app.route('/get_info')
-def get_info():
-    # 获取存用户信息
-    # http://127.0.0.1:5000/get_info?account=20173250131&passwd=350426yyq
+@app.route('/get_student_info')
+def get_student_info():
+    # 获取学生个人信息
+    # http://127.0.0.1:5000/get_student_info?account=20173400117&passwd=130132wzf
     account = request.args.get("account")
     passwd = request.args.get("passwd")
     user = school.user_login(account, passwd)
-    return jsonify(user.get_info())
+    student_info = user.get_student_info()
+    return jsonify(student_info)
 
 
 @app.route('/get_score')
@@ -29,7 +30,7 @@ def get_score():
     account = request.args.get("account")
     passwd = request.args.get("passwd")
     user = school.user_login(account, passwd)
-    school_data = user.get_score(score_year='2018-2019', score_term='2', use_api=3)
+    school_data = user.get_score(use_api=3)
     return jsonify(school_data)
 
 
@@ -48,10 +49,10 @@ def get_schedule():
 
 
 @app.route('/setcode')
-def setCode():
+def setcode():
     pre_url = 'http://api.qihaoyu.tech/jws/getcode'
     scope = 'snsapi_userinfo'
-    again_url = '?validate=userinfo&url=http://api.qihaoyu..tech/jws/setcode'
+    again_url = '?validate=userinfo&url=http://api.qihaoyu..tech/jws/set_code'
     wx = WeChat()
     weixin = wx.setCode(pre_url, scope, again_url)
     return redirect(weixin)
@@ -65,26 +66,36 @@ def getCode():
         sr = RedisUse()
         res = wx.getCode(code)
         if res:
-                # return json.dumps(res)
-            openid = res['openid']
-            token = hashlib.md5(openid+time.time())
-            redis_result = sr.insertTokenOpenid(token, openid)
-            if redis_result:
-                url = 'http://myserver.qihaoyu.tech?token={token}'.format(token=token)
-                return redirect(url)
-            else:
-                data = {
-                    'code': 1,
-                    'msg': 'redis数据库错误，请联系管理员'
-                }
-                return jsonify(data)
+            return res
+            # openid = res[0]['openid']
+            # img = res['heardimgurl']
+            # nickname = res['nickname']
+            # data = {
+            #     'openid': openid,
+            #     'img': img,
+            #     'nickname': nickname,
+            # }
+            # return jsonify(openid)
+            # token = hashlib.md5(openid+time.time())
+            # redis_result = sr.insertTokenOpenid(token, openid)
+            # if redis_result:
+            #     url = 'http://myserver.qihaoyu.tech?token={token}'.format(token=token)
+            #     return redirect(url)
+            # else:
+            #     data = {
+            #         'code': 1,
+            #         'msg': 'redis数据库错误，请联系管理员'
+            #     }
+            #     return jsonify(data)
         else:
             redirect(again_url)
 
 
 @app.route('/user_binding', methods=['POST'])
 def user_binding():
+    sr = RedisUse()
     token = request.form('token')
+    openid  = sr.getTokenOpenid(token)
     student_id = request.form('student_id')
     password = request.form('password')
 

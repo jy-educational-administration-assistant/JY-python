@@ -42,7 +42,8 @@ class WeChat(object):
             getUserInfo = urllib.request.Request(url_info.format(access_token=access_token, openid=openid))
             res_data = urllib.request.urlopen(getUserInfo)
             res = res_data.read().decode('utf-8')
-            return json.dumps(res)
+
+            return res
 
 
 class RedisUse(object):
@@ -56,6 +57,11 @@ class RedisUse(object):
     def insertTokenOpenid(self, token, openid):
         res = self.sr.set(token, openid)
         res_time = self.sr.expire(token, 7200)
+
+        return res
+
+    def getTokenOpenid(self, token):
+        res = self.sr.get(token)
 
         return res
 
@@ -107,7 +113,7 @@ class Mysqluse(object):
         result = self.exec(sql_str)
         return result
 
-    # def updateStudentMessage(self, ):
+    # def updateStudentMessage(self, data):
     #     sql_str = "UPDATE student SET"
 
 
