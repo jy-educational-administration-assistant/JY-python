@@ -66,7 +66,8 @@ def getCode():
         sr = RedisUse()
         res = wx.getCode(code)
         if res:
-            return res
+            res = json.loads(res)
+            return res['openid']
             # openid = res[0]['openid']
             # img = res['heardimgurl']
             # nickname = res['nickname']
