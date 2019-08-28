@@ -67,38 +67,67 @@ def getCode():
         res = wx.getCode(code)
         if res:
             res = json.loads(res)
-            return res['openid']
-            # openid = res[0]['openid']
-            # img = res['heardimgurl']
-            # nickname = res['nickname']
-            # data = {
-            #     'openid': openid,
-            #     'img': img,
-            #     'nickname': nickname,
-            # }
-            # return jsonify(openid)
-            # token = hashlib.md5(openid+time.time())
-            # redis_result = sr.insertTokenOpenid(token, openid)
-            # if redis_result:
-            #     url = 'http://myserver.qihaoyu.tech?token={token}'.format(token=token)
-            #     return redirect(url)
-            # else:
-            #     data = {
-            #         'code': 1,
-            #         'msg': 'redis数据库错误，请联系管理员'
-            #     }
-            #     return jsonify(data)
+            wx = WeChat()
+            sr = RedisUse()
+            res = wx.getCode(code)
+            if res:
+                res = json.loads(res)
+                openid = res['openid']
+                img = res['headimgurl']
+                nickname = res['nickname']
+                time_now = str(int(time.time()))
+                token = hashlib.new('md5', (openid + time_now).encode("utf-8"))
+                token = token.hexdigest()
+                redis_token_result = sr.insertTokenOpenid(token, openid)
+                if redis_token_result:
+                    data_openid = {
+                        'img': img,
+                        'nickname': nickname,
+                    }
+                    redis_data_openid = sr.insertOpenidData(openid, data_openid)
+                    if not redis_data_openid:
+                        data = {
+                            'code': 1,
+                            'msg': 'redis数据库错误，请联系管理员'
+                        }
+                        return data
+                    url = 'http://myserver.qihaoyu.tech'
+                    obj = redirect(url)
+                    obj.set_cookie('token', token)
+                    return obj
+
+                else:
+                    data = {
+                        'code': 1,
+                        'msg': 'redis数据库错误，请联系管理员'
+                    }
+                    return jsonify(data)
         else:
             redirect(again_url)
 
 
-@app.route('/user_binding', methods=['POST'])
+@app.route('/user_binding', methods=['GET', 'POST'])
 def user_binding():
     sr = RedisUse()
-    token = request.form('token')
-    openid  = sr.getTokenOpenid(token)
-    student_id = request.form('student_id')
-    password = request.form('password')
+    token = request.form.get('token')
+    openid = sr.getTokenOpenid(token)
+    student_id = request.form.get('student_id')
+    password = request.form.get('password')
+    data = {
+        'student_id': student_id,
+        'password': password,
+    }
+    redis_result_id_password = sr.insertOpenidData(openid, data)
+    if not redis_result_id_password:
+        data_redis_none = {
+                   'code': 1,
+                   'msg': 'redis数据库错误，请联系管理员'
+        }
+        return data_redis_none
+    data = {
+        'code': 0
+    }
+    return data
 
 
 if __name__ == '__main__':
