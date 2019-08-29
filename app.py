@@ -2,6 +2,7 @@ from __future__ import absolute_import, unicode_literals
 from flask import Flask, request, jsonify, redirect
 from school_api import SchoolClient
 from weixin import WeChat, RedisUse
+import requests
 import time
 import hashlib
 import urllib.request
@@ -48,9 +49,9 @@ def get_schedule():
     return jsonify(schedule_data)
 
 
-@app.route('/setcode')
-def setcode():
-    pre_url = 'http://api.qihaoyu.tech/jws/getcode'
+@app.route('/set_code')
+def set_code():
+    pre_url = 'http://api.qihaoyu.tech/jws/get_code'
     scope = 'snsapi_userinfo'
     again_url = '?validate=userinfo&url=http://api.qihaoyu..tech/jws/set_code'
     wx = WeChat()
@@ -58,8 +59,8 @@ def setcode():
     return redirect(weixin)
 
 
-@app.route('/getcode')
-def getCode():
+@app.route('/get_code')
+def get_code():
         code = request.args.get('code')
         again_url = request.args.get('url')
         wx = WeChat()
@@ -67,43 +68,49 @@ def getCode():
         res = wx.getCode(code)
         if res:
             res = json.loads(res)
-            wx = WeChat()
-            sr = RedisUse()
-            res = wx.getCode(code)
-            if res:
-                res = json.loads(res)
-                openid = res['openid']
-                img = res['headimgurl']
-                nickname = res['nickname']
-                time_now = str(int(time.time()))
-                token = hashlib.new('md5', (openid + time_now).encode("utf-8"))
-                token = token.hexdigest()
-                redis_token_result = sr.insertTokenOpenid(token, openid)
-                if redis_token_result:
-                    data_openid = {
-                        'img': img,
-                        'nickname': nickname,
-                    }
-                    redis_data_openid = sr.insertOpenidData(openid, data_openid)
-                    if not redis_data_openid:
-                        data = {
-                            'code': 1,
-                            'msg': 'redis数据库错误，请联系管理员'
-                        }
-                        return data
-                    url = 'http://myserver.qihaoyu.tech'
-                    obj = redirect(url)
-                    obj.set_cookie('token', token)
-                    return obj
-
-                else:
+            openid = res['openid']
+            img = res['headimgurl']
+            nickname = res['nickname']
+            time_now = str(int(time.time()))
+            token = hashlib.new('md5', (openid+time_now).encode("utf-8"))
+            token = token.hexdigest()
+            redis_token_result = sr.insertTokenOpenid(token, openid)
+            if redis_token_result:
+                data_openid = {
+                    'img': img,
+                    'nickname': nickname,
+                }
+                redis_data_openid = sr.insertOpenidData(openid, data_openid)
+                if not redis_data_openid:
                     data = {
                         'code': 1,
                         'msg': 'redis数据库错误，请联系管理员'
-                    }
+                     }
                     return jsonify(data)
+                url = 'http://myserver.qihaoyu.tech'
+                obj = redirect(url)
+                obj.set_cookie('token', token)
+                return obj
+
+            else:
+                data = {
+                    'code': 1,
+                    'msg': 'redis数据库错误，请联系管理员'
+                }
+                return jsonify(data)
+
         else:
             redirect(again_url)
+
+
+@app.route('/get_cookies')
+def get_cookies():
+    url = "http://api.qihaoyu.tech/jws/get_score"
+    session = requests.Session()
+    response = session.get(url)
+    # html_set_cookie = requests.utils.dict_from_cookiejar(session.cookies)
+    r = session.cookies.get_dict()
+    return jsonify(r)
 
 
 @app.route('/user_binding', methods=['GET', 'POST'])
@@ -131,4 +138,4 @@ def user_binding():
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(port='5000', debug=True)
