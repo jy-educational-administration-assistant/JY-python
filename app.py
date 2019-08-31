@@ -1,12 +1,9 @@
 from __future__ import absolute_import, unicode_literals
 from flask import Flask, request, jsonify, redirect
 from school_api import SchoolClient
-from weixin import WeChat, RedisUse
-import requests
+from weixin import WeChat, RedisUse, MysqlUse
 import time
 import hashlib
-import urllib.request
-import urllib.parse
 import json
 
 app = Flask(__name__)
@@ -17,9 +14,16 @@ school = SchoolClient('http://jws.hebiace.edu.cn/default2.aspx')
 def get_student_info():
     # 获取学生个人信息
     # http://127.0.0.1:5000/get_student_info?account=20173400117&passwd=130132wzf
-    account = request.args.get("account")
-    passwd = request.args.get("passwd")
-    user = school.user_login(account, passwd)
+    # account = request.args.get("account")
+    # password = request.args.get("passwd")
+    sr = RedisUse()
+    token = request.cookies.get('token')
+    openid = sr.getTokenOpenid(token)
+    db = MysqlUse()
+    res = db.selectStudentMessage('openid', openid)
+    account = res[0][0]
+    password = res[0][1]
+    user = school.user_login(account, password)
     student_info = user.get_student_info()
     return jsonify(student_info)
 
@@ -27,10 +31,17 @@ def get_student_info():
 @app.route('/get_score')
 def get_score():
     # 获取成绩
-    # http://127.0.0.1:5000/get_score?account=20173250131&passwd=350429yyq
-    account = request.args.get("account")
-    passwd = request.args.get("passwd")
-    user = school.user_login(account, passwd)
+    # http://127.0.0.1:5000/get_score?account=20173250131&password=350429yyq
+    # account = request.args.get("account")
+    # password = request.args.get("password")
+    sr = RedisUse()
+    token = request.cookies.get('token')
+    openid = sr.getTokenOpenid(token)
+    db = MysqlUse()
+    res = db.selectStudentMessage('openid', openid)
+    account = res[0][0]
+    password = res[0][1]
+    user = school.user_login(account, password)
     school_data = user.get_score(use_api=3)
     return jsonify(school_data)
 
@@ -38,10 +49,17 @@ def get_score():
 @app.route('/get_schedule')
 def get_schedule():
     # 获取课表
-    # http://127.0.0.1:5000/get_schedule?account=20173250131&passwd=350426yyq&schedule_year=2019-2020&schedule_term=1
-    account = request.args.get("account")
-    passwd = request.args.get("passwd")
-    user = school.user_login(account, passwd)
+    # http://127.0.0.1:5000/get_score?account=20173250131&password=350429yyq
+    # account = request.args.get("account")
+    # password = request.args.get("password")
+    sr = RedisUse()
+    token = request.cookies.get('token')
+    openid = sr.getTokenOpenid(token)
+    db = MysqlUse()
+    res = db.selectStudentMessage('openid', openid)
+    account = res[0][0]
+    password = res[0][1]
+    user = school.user_login(account, password)
     schedule_year = request.args.get("schedule_year")
     schedule_term = request.args.get("schedule_term")
     schedule_type = 1
@@ -87,8 +105,7 @@ def get_code():
                         'msg': 'redis数据库错误，请联系管理员'
                      }
                     return jsonify(data)
-                url = 'http://myserver.qihaoyu.tech'
-                obj = redirect(url)
+                obj = redirect('user_login')
                 obj.set_cookie('token', token)
                 return obj
 
@@ -103,38 +120,76 @@ def get_code():
             redirect(again_url)
 
 
-@app.route('/get_cookies')
-def get_cookies():
-    url = "http://api.qihaoyu.tech/jws/get_score"
-    session = requests.Session()
-    response = session.get(url)
-    # html_set_cookie = requests.utils.dict_from_cookiejar(session.cookies)
-    r = session.cookies.get_dict()
-    return jsonify(r)
+@app.route('/user_login', methods=['GET', 'POST'])
+def user_login():
+    sr = RedisUse()
+    db = MysqlUse()
+    token = request.cookies.get('token')
+    openid = sr.getTokenOpenid(token)
+    res_binding_openid = db.selectStudentMessage('openid', openid)
+    if not res_binding_openid:
+        url = 'http://myserver.qihaoyu.tech'
+        obj = redirect(url)
+        return obj
+    else:
+        data = {
+            'code': 3,
+        }
+        return jsonify(data)
 
 
-@app.route('/user_binding', methods=['GET', 'POST'])
+@app.route('/user_binding')
 def user_binding():
     sr = RedisUse()
-    token = request.form.get('token')
+    db = MysqlUse()
+    token = request.cookies.get('token')
     openid = sr.getTokenOpenid(token)
-    student_id = request.form.get('student_id')
+    times = str(time.time()).split('.', 1)
+    times = times[0]
+    # student_id = request.args.get('account')
+    # password = request.args.get('password')
+    student_id = request.form.get('account')
     password = request.form.get('password')
-    data = {
-        'student_id': student_id,
-        'password': password,
-    }
-    redis_result_id_password = sr.insertOpenidData(openid, data)
-    if not redis_result_id_password:
+    user = school.user_login(student_id, password, use_cookie_login=False)
+    res = hasattr(user, 'tip')
+    if res is True:
+        data = {
+            'code': 1,
+            'msg': user.tip
+        }
+        return jsonify(data)
+    redis_result_nature = sr.getOpenidNatureAll(openid)
+    if not redis_result_nature:
         data_redis_none = {
-                   'code': 1,
-                   'msg': 'redis数据库错误，请联系管理员'
+            'code': 1,
+            'msg': 'redis数据库错误，请联系管理员'
         }
         return data_redis_none
-    data = {
-        'code': 0
-    }
-    return data
+    else:
+        data_redis = {
+            'student_id': student_id,
+            'password': password,
+            'binding_time': times,
+            'major': '',
+            'email': '',
+            'college': '',
+            'full_name': '',
+            'img': redis_result_nature['img'],
+            'nickname': redis_result_nature['nickname'],
+            'openid': openid,
+        }
+        sql_result = db.insertStudentMessage(data_redis)
+        if not sql_result:
+            data_res = {
+                'code': 1,
+                'msg': 'sql数据库添加错误，请联系管理员'
+            }
+            return jsonify(data_res)
+        else:
+            data = {
+                'code': 0
+            }
+            return jsonify(data)
 
 
 if __name__ == '__main__':
