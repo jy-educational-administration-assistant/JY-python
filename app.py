@@ -56,6 +56,7 @@ def set_code():
     again_url = '?validate=userinfo&url=http://api.qihaoyu..tech/jws/set_code'
     wx = WeChat()
     weixin = wx.setCode(pre_url, scope, again_url)
+    print(weixin)
     return redirect(weixin)
 
 
@@ -135,6 +136,22 @@ def user_binding():
         'code': 0
     }
     return data
+
+@app.route('/hello', methods=['GET'])
+def hello():
+    return 'hello world'
+
+@app.route('/test_set_cookie', methods=['GET'])
+def test_set_cookie():
+    resp = make_response('set_cookie')
+    resp.set_cookie('passwd', '123456')
+    return resp
+
+
+@app.route('/test_get_cookie', methods=['GET'])
+def test_get_cookie():
+    name = request.cookies.get('name')
+    return name
 
 
 if __name__ == '__main__':
