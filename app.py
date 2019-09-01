@@ -1,16 +1,25 @@
 from __future__ import absolute_import, unicode_literals
 from weixin import WeChat, RedisUse, MysqlUse, UserApply
-from school_api.session.redisstorage import RedisStorage
 from flask import Flask, request, jsonify, redirect
 from school_api import SchoolClient
 from redis import Redis
+from school_api.session.redisstorage import RedisStorage
 import time
 import hashlib
 import json
 
 app = Flask(__name__)
-school = SchoolClient('http://jws.hebiace.edu.cn/default2.aspx')
 url = 'http://myserver.qihaoyu.tech'
+redis = Redis()
+session = RedisStorage(redis)
+conf = {
+    "url": 'http://jws.hebiace.edu.cn/default2.aspx',
+    "session": session,
+    'name': '河北建筑工程学院',
+    'code': 'hbjg'
+}
+
+school = SchoolClient(**conf)
 
 
 @app.route('/get_student_info')
@@ -31,13 +40,6 @@ def get_student_info():
         res = db.selectStudentMessage('openid', openid)
         account = res[0][0]
         password = res[0][1]
-        redis = Redis()
-        session = RedisStorage(redis)
-        conf = {
-            "url": 'http://jws.hebiace.edu.cn/default2.aspx',
-            "session": session
-        }
-        school = SchoolClient(**conf)
         user = school.user_login(account, password)
         student_info = user.get_student_info()
         return jsonify(student_info)
@@ -47,8 +49,6 @@ def get_student_info():
 def get_score():
     # 获取成绩
     # http://127.0.0.1:5000/get_score?account=20173250131&password=350429yyq
-    # account = request.args.get("account")
-    # password = request.args.get("password")
     sr = RedisUse()
     token = request.cookies.get('token')
     if not token:
@@ -193,8 +193,6 @@ def user_binding():
         openid = sr.getTokenOpenid(token)
         times = str(time.time()).split('.', 1)
         times = times[0]
-        # student_id = request.args.get('account')
-        # password = request.args.get('password')
         student_id = request.form.get('account')
         password = request.form.get('password')
         user = school.user_login(student_id, password, use_cookie_login=False)
@@ -257,26 +255,6 @@ def test():
     password = res[0][1]
     res = use.get_student_message(account, password)
     return jsonify(res)
-    # data = {
-    #     'major':  res['student_zy'],
-    #     'classroom': res['student_xzb'],
-    #     'full_name': res['student_name'],
-    #     'college': res['student_xy'],
-    # }
-    # student_id = request.form.get('account')
-    # password = request.form.get('password')
-    # db = MysqlUse()
-    # res = db.insertStudentMessage(data)
-    # if not res:
-    #     data_res = {
-    #         'code': 1,
-    #         'msg': 'sql数据库添加错误，请联系管理员'
-    #     }
-    #     return jsonify(data)
-    # else:
-    #     data = {
-    #         'code': 0
-    #     }
 
 
 @app.route('/hello', methods=['GET'])
