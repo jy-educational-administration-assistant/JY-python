@@ -1,6 +1,7 @@
 import urllib.request
 import urllib.parse
 # from flask import Flask, request, redirect, jsonify
+from school_api import SchoolClient
 import json
 from redis import StrictRedis
 import pymysql
@@ -10,6 +11,7 @@ sys.path.append('D:\枼玉清的文档\python\jws')
 from database import HostAccount
 
 
+school = SchoolClient('http://jws.hebiace.edu.cn/default2.aspx')
 appID = "wx1b26e33bc6d53859"
 AppSecret = "fd82140b782c9508b76fa276f13a8d44"
 
@@ -136,7 +138,7 @@ class MysqlUse(object):
             print(str(e))
 
     def insertStudentMessage(self, data):
-        sql_str = "INSERT INTO student(student_id, password, major, openid, binding_time, nickname, img, email, college, full_name) VALUES('{student_id}','{password}','{major}','{openid}','{binding_time}','{nickname}','{img}','{email}','{college}','{full_name}')".format(student_id=data['student_id'], password=data['password'], major=data['major'], openid=data['openid'], binding_time=data['binding_time'], nickname=data['nickname'], img=data['img'], email=data['email'], college=data['college'], full_name=data['full_name'])
+        sql_str = "INSERT INTO student(student_id, password, major, openid, binding_time, nickname, img, email, college, full_name, classroom) VALUES('{student_id}','{password}','{major}','{openid}','{binding_time}','{nickname}','{img}','{email}','{college}','{full_name}','{classroom}')".format(student_id=data['student_id'], password=data['password'], major=data['major'], openid=data['openid'], binding_time=data['binding_time'], nickname=data['nickname'], img=data['img'], email=data['email'], college=data['college'], full_name=data['full_name'], classroom=data['classroom'])
         result = self.exec(sql_str)
 
         return result
@@ -160,11 +162,18 @@ class MysqlUse(object):
         return res
 
     def insertAdmin(self, data):
-
         sql_str = "INSERT INTO admin(admin_name, admin_password,time) VALUES('{admin_name}','{admin_password}','{time}')".format(admin_name=data['admin_name'], admin_password=data['admin_password'], time=data['time'])
         res = self.exec(sql_str)
 
         return res
+
+
+class UserApply(object):
+    def get_student_message(self, account, password):
+        user = school.user_login(account, password)
+        student_info = user.get_student_info()
+
+        return student_info
 
 
 
