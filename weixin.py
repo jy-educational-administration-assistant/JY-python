@@ -1,10 +1,17 @@
 import urllib.request
 import urllib.parse
-from flask import Flask, request, redirect, jsonify
+# from flask import Flask, request, redirect, jsonify
+from school_api import SchoolClient
 import json
 from redis import StrictRedis
 import pymysql
+#如果上传到服务器，注释sys,path.append
+import sys
+sys.path.append('D:\枼玉清的文档\python\jws')
+from database import HostAccount
 
+
+school = SchoolClient('http://jws.hebiace.edu.cn/default2.aspx')
 appID = "wx1b26e33bc6d53859"
 AppSecret = "fd82140b782c9508b76fa276f13a8d44"
 
@@ -45,6 +52,12 @@ class WeChat(object):
 
             return res
 
+    def getHostName(self):
+        database = HostAccount()
+        data = database.getHostNature()
+
+        return data
+
 
 class RedisUse(object):
     def __init__(self):
@@ -78,26 +91,42 @@ class RedisUse(object):
     def getOpenidNature(self, openid, nature):
         res = self.sr.hget(openid, nature)
 
-        return jsonify(res)
+        return res
+
+    def getOpenidNatureAll(self, openid):
+        res = self.sr.hgetall(openid)
+
+        return res
 
     def deleteOpenidNature(self, openid, keys):
         res = self.sr.hdel(openid, keys)
 
         return res
 
-class Mysqluse(object):
+
+class MysqlUse(object):
     def __init__(self):
+        database = HostAccount()
+        data = database.getHostNature()
         self.conn = pymysql.connect(
-            host='localhost',
-            user='root',
-            password='root',
-            database='jws',
+            host=data['host'],
+            user=data['user'],
+            password=data['password'],
+            database=data['database'],
         )
         self.cur = self.conn.cursor()
 
     def __del__(self):
         self.conn.close()
         self.cur.close()
+
+    def configMysql(self):
+        msg = "链接成功"
+        return True
+
+    def query(self, sql):
+        self.cur.execute(sql)
+        return self.cur.fetchall()
 
     def exec(self, sql):
         try:
@@ -109,12 +138,43 @@ class Mysqluse(object):
             print(str(e))
 
     def insertStudentMessage(self, data):
-        sql_str = "INSERT INTO student(studennt_id,password,major,openid,binding_time,img) VALUE('{student_id}','{password}','{major}','{openid}','{binding_time}','{nickname}','{img}','{email}','{college}')".format(student_id=data['student_id'], password=data['password'], major=data['major'], openid=data['openid'], binding_time=data['binding_time'], nickname=data['nickname'], img=data['img'], email=data['email'], college=data['college'])
+        sql_str = "INSERT INTO student(student_id, password, major, openid, binding_time, nickname, img, email, college, full_name, classroom) VALUES('{student_id}','{password}','{major}','{openid}','{binding_time}','{nickname}','{img}','{email}','{college}','{full_name}','{classroom}')".format(student_id=data['student_id'], password=data['password'], major=data['major'], openid=data['openid'], binding_time=data['binding_time'], nickname=data['nickname'], img=data['img'], email=data['email'], college=data['college'], full_name=data['full_name'], classroom=data['classroom'])
         result = self.exec(sql_str)
+
         return result
 
-    # def updateStudentMessage(self, data):
-    #     sql_str = "UPDATE student SET"
+    def updateStudentMessage(self, query_title, query_object, modify_title, modify_object):
+        sql_str = "UPDATE student SET `{modify_title}` = '{modify_object}' WHERE `{query_title}` = '{query_object}'".format(modify_title=modify_title, modify_object=modify_object, query_title=query_title,query_object=query_object)
+        res = self.exec(sql_str)
+
+        return res
+
+    def deleteStudentMessage(self, student_id):
+        sql_str = "DELETE FROM student WHERE  `student_id`  = '{student_id}'".format(student_id=student_id)
+        res = self.exec(sql_str)
+
+        return res
+
+    def selectStudentMessage(self, query_title, query_object):
+        sql_str = "SELECT * FROM student WHERE `{query_title}` = '{query_object}'".format(query_title=query_title, query_object=query_object)
+        res = self.query(sql_str)
+
+        return res
+
+    def insertAdmin(self, data):
+        sql_str = "INSERT INTO admin(admin_name, admin_password,time) VALUES('{admin_name}','{admin_password}','{time}')".format(admin_name=data['admin_name'], admin_password=data['admin_password'], time=data['time'])
+        res = self.exec(sql_str)
+
+        return res
+
+
+class UserApply(object):
+    def get_student_message(self, account, password):
+        user = school.user_login(account, password)
+        student_info = user.get_student_info()
+
+        return student_info
+
 
 
 
