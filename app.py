@@ -36,6 +36,10 @@ def get_student_info():
         })
     else:
         openid = sr.getTokenOpenid(token)
+        if not openid:
+            return jsonify({
+                'code': 2,
+            })
         db = MysqlUse()
         res = db.selectStudentMessage('openid', openid)
         account = res[0][0]
@@ -49,6 +53,8 @@ def get_student_info():
 def get_score():
     # 获取成绩
     # http://127.0.0.1:5000/get_score?account=20173250131&password=350429yyq
+    score_year = request.args.get('year')
+    score_term = request.args.get('term')
     sr = RedisUse()
     token = request.cookies.get('token')
     if not token:
@@ -57,21 +63,28 @@ def get_score():
         })
     else:
         openid = sr.getTokenOpenid(token)
+        if not openid:
+            return jsonify({
+                'code': 2,
+            })
         db = MysqlUse()
         res = db.selectStudentMessage('openid', openid)
         account = res[0][0]
         password = res[0][1]
         user = school.user_login(account, password)
-        school_data = user.get_score(use_api=3)
+        school_data = user.get_score(score_year, score_term, use_api=3)
         return jsonify(school_data)
 
 
 @app.route('/get_schedule')
 def get_schedule():
     # 获取课表
-    # http://127.0.0.1:5000/get_score?account=20173250131&password=350429yyq
+    # http://127.0.0.1:5000/get_score?account=20173250131&password=350429yyq&
     # account = request.args.get("account")
     # password = request.args.get("password")
+    schedule_year = request.args.get('year')
+    schedule_term= request.args.get('term')
+    schedule_type = 1
     sr = RedisUse()
     token = request.cookies.get('token')
     if not token:
@@ -80,14 +93,15 @@ def get_schedule():
         })
     else:
         openid = sr.getTokenOpenid(token)
+        if not openid:
+            return jsonify({
+                'code': 2,
+            })
         db = MysqlUse()
         res = db.selectStudentMessage('openid', openid)
         account = res[0][0]
         password = res[0][1]
         user = school.user_login(account, password)
-        schedule_year = request.args.get("schedule_year")
-        schedule_term = request.args.get("schedule_term")
-        schedule_type = 1
         schedule_data = user.get_schedule(schedule_year, schedule_term, schedule_type)
         return jsonify(schedule_data)
 
@@ -159,6 +173,10 @@ def user_login():
         })
     else:
         openid = sr.getTokenOpenid(token)
+        if not openid:
+            return jsonify({
+                'code': 2,
+            })
         res_binding_openid = db.selectStudentMessage('openid', openid)
         if not res_binding_openid:
             data_isbinding = {
@@ -191,6 +209,10 @@ def user_binding():
         })
     else:
         openid = sr.getTokenOpenid(token)
+        if not openid:
+            return jsonify({
+                'code': 2,
+            })
         times = str(time.time()).split('.', 1)
         times = times[0]
         student_id = request.form.get('account')
@@ -263,9 +285,9 @@ def hello():
 
 @app.route('/test_set_cookie', methods=['GET'])
 def test_set_cookie():
-    resp = make_response('set_cookie')
-    resp.set_cookie('passwd', '123456')
-    return resp
+    # resp = make_response('set_cookie')
+    # resp.set_cookie('passwd', '123456')
+    return jsonify(1)
 
 
 @app.route('/test_get_cookie', methods=['GET'])
