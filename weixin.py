@@ -113,6 +113,7 @@ class MysqlUse(object):
             user=data['user'],
             password=data['password'],
             database=data['database'],
+            charset='utf8',
         )
         self.cur = self.conn.cursor()
 
@@ -150,13 +151,13 @@ class MysqlUse(object):
         return res
 
     def deleteStudentMessage(self, student_id):
-        sql_str = "DELETE FROM student WHERE  `student_id`  = '{student_id}'".format(student_id=student_id)
+        sql_str = "DELETE FROM student WHERE  `student_id` = '{student_id}'".format(student_id=student_id)
         res = self.exec(sql_str)
 
         return res
 
     def selectStudentMessage(self, query_title, query_object):
-        sql_str = "SELECT * FROM student WHERE `{query_title}` = '{query_object}'".format(query_title=query_title, query_object=query_object)
+        sql_str = "SELECT * FROM student WHERE `{query_title}` = '{query_object}'".format(query_title=query_title, query_object=query_object,)
         res = self.query(sql_str)
 
         return res
@@ -167,13 +168,12 @@ class MysqlUse(object):
 
         return res
 
+    def insertStudentOther(self, query_object, data):
+        sql_str = "UPDATE student SET `major` = '{major}',`college` = '{college}',`full_name`='{full_name}',`classroom`='{classroom}'  WHERE `openid` = '{query_object}'".format(major=data['student_zy'], college=data['student_xy'], full_name=data['student_name'], classroom=data['student_xzb'], query_object=query_object)
+        self.cur.execute('SET character_set_connection=utf8;')
+        res = self.exec(sql_str)
 
-class UserApply(object):
-    def get_student_message(self, account, password):
-        user = school.user_login(account, password)
-        student_info = user.get_student_info()
-
-        return student_info
+        return res
 
 
 

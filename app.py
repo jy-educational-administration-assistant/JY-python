@@ -1,6 +1,6 @@
 from __future__ import absolute_import, unicode_literals
-from weixin import WeChat, RedisUse, MysqlUse, UserApply
-from flask import Flask, request, jsonify, redirect
+from weixin import WeChat, RedisUse, MysqlUse
+from flask import Flask, request, jsonify, redirect, make_response
 from school_api import SchoolClient
 from redis import Redis
 from school_api.session.redisstorage import RedisStorage
@@ -42,11 +42,40 @@ def get_student_info():
             })
         db = MysqlUse()
         res = db.selectStudentMessage('openid', openid)
-        account = res[0][0]
-        password = res[0][1]
-        user = school.user_login(account, password)
-        student_info = user.get_student_info()
-        return jsonify(student_info)
+        if res[0][2] is '' or res[0][8] is '' or res[0][9] is '' or res[0][10] is '':
+            account = res[0][0]
+            password = res[0][1]
+            user = school.user_login(account, password)
+            student_info = user.get_student_info()
+            res_sql = db.insertStudentOther(openid, student_info)
+            if res_sql:
+                res = db.selectStudentMessage('openid', openid)
+                res_data = {
+                    "student_name": res[0][9],
+                    "student_xy": res[0][8],
+                    "student_xzb": res[0][10],
+                    "student_zy": res[0][2],
+                }
+                data = {
+                    'code': 0,
+                    'data': res_data,
+                    'res_sql': res_sql,
+                }
+                return jsonify(data)
+            else:
+                data = {
+                    'code': 1,
+                    'msg': 'sql运行错误，请联系管理员'
+                }
+                return jsonify(data)
+        else:
+            data = {
+                "student_name": res[0][9],
+                "student_xy": res[0][8],
+                "student_xzb": res[0][10],
+                "student_zy": res[0][2],
+            }
+            return jsonify(data)
 
 
 @app.route('/get_score')
@@ -83,7 +112,7 @@ def get_schedule():
     # account = request.args.get("account")
     # password = request.args.get("password")
     schedule_year = request.args.get('year')
-    schedule_term= request.args.get('term')
+    schedule_term = request.args.get('term')
     schedule_type = 1
     sr = RedisUse()
     token = request.cookies.get('token')
@@ -231,7 +260,7 @@ def user_binding():
                 'code': 1,
                 'msg': 'redis数据库错误，请联系管理员'
             }
-            return data_redis_none
+            return jsonify(data_redis_none)
         else:
             data_redis = {
                 'student_id': student_id,
@@ -271,28 +300,38 @@ def test():
     # http://127.0.0.1/test?account=20173250131&password=350426yyq
     openid = 'ocyjVv9AuNf4JVjja6zlIIY5IfO8'
     db = MysqlUse()
-    use = UserApply()
     res = db.selectStudentMessage('openid', openid)
     account = res[0][0]
     password = res[0][1]
-    res = use.get_student_message(account, password)
+    user = school.user_login(account, password)
+    student_info = user.get_student_info()
+    # res_sql = db.insertStudentOther(openid, student_info)
     return jsonify(res)
+    # if res[0][2] is '' and res[0][8] is '' and res[0][9] is '' and res[0][10] is '':
+    #     account = res[0][0]
+    #     password = res[0][1]
+    #     res_student = use.get_student_message(account, password)
+    #     # res_sql = db.insertStudentOther(openid, res_student)
+    #     return jsonify(res_student)
+    # else:
+    #     return jsonify(res)
 
 
 @app.route('/hello', methods=['GET'])
 def hello():
     return 'hello world'
 
+
 @app.route('/test_set_cookie', methods=['GET'])
 def test_set_cookie():
-    # resp = make_response('set_cookie')
-    # resp.set_cookie('passwd', '123456')
-    return jsonify(1)
+    resp = make_response()
+    resp.set_cookie('passwd', '1595995')
+    return resp
 
 
 @app.route('/test_get_cookie', methods=['GET'])
 def test_get_cookie():
-    name = request.cookies.get('name')
+    name = request.cookies.get('password')
     return name
 
 
