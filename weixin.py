@@ -80,6 +80,7 @@ class RedisUse(object):
 
     def insertOpenidData(self, openid, data):
         res = self.sr.hmset(openid, data)
+        res_time = self.sr.expire(openid, 604800)
 
         return res
 
@@ -139,7 +140,7 @@ class MysqlUse(object):
             print(str(e))
 
     def insertStudentMessage(self, data):
-        sql_str = "INSERT INTO student(student_id, password, major, openid, binding_time, nickname, img, email, college, full_name, classroom) VALUES('{student_id}','{password}','{major}','{openid}','{binding_time}','{nickname}','{img}','{email}','{college}','{full_name}','{classroom}')".format(student_id=data['student_id'], password=data['password'], major=data['major'], openid=data['openid'], binding_time=data['binding_time'], nickname=data['nickname'], img=data['img'], email=data['email'], college=data['college'], full_name=data['full_name'], classroom=data['classroom'])
+        sql_str = "INSERT INTO student(student_id, password, major, openid, binding_time, nickname, img, email, college, full_name, classroom,all_point,major_number) VALUES('{student_id}','{password}','{major}','{openid}','{binding_time}','{nickname}','{img}','{email}','{college}','{full_name}','{classroom}','{all_point}','{major_number}')".format(student_id=data['student_id'], password=data['password'], major=data['major'], openid=data['openid'], binding_time=data['binding_time'], nickname=data['nickname'], img=data['img'], email=data['email'], college=data['college'], full_name=data['full_name'], classroom=data['classroom'], all_point=data['all_point'], major_number=data['major'])
         result = self.exec(sql_str)
 
         return result
@@ -163,7 +164,7 @@ class MysqlUse(object):
         return res
 
     def insertAdmin(self, data):
-        sql_str = "INSERT INTO admin(admin_name, admin_password,time) VALUES('{admin_name}','{admin_password}','{time}')".format(admin_name=data['admin_name'], admin_password=data['admin_password'], time=data['time'])
+        sql_str = "INSERT INTO admin(admin_name,admin_password,time) VALUES('{admin_name}','{admin_password}','{time}')".format(admin_name=data['admin_name'], admin_password=data['admin_password'], time=data['time'])
         res = self.exec(sql_str)
 
         return res
@@ -175,6 +176,47 @@ class MysqlUse(object):
 
         return res
 
+    def insertScore(self, year, term, data, account):
+            if 'bkcj' not in data.keys():
+                data['bkcj'] = '0'
+            if 'cxcj' not in data.keys():
+                    data['cxcj'] = '0'
+            sql_str = "INSERT INTO grade(term,school_year,course_code,course_name,credit,point,score,nature,student_id,usual_score,makeup_score,term_score,rebuild_score,college)VALUES('{term}','{school_year}','{course_code}','{course_name}','{credit}','{point}','{score}','{nature}','{student_id}','{usual_score}','{makeup_score}','{term_score}','{rebuild_score}','{college}')".format(term=term, school_year=year, course_code=data['lesson_code'], course_name=data['lesson_name'], credit=data['credit'], point=data['point'], score=data['all_score'], usual_score=data['peace_score'], term_score=data['term_end_score'], nature=data['lesson_nature'], student_id=account, makeup_score=data['bkcj'], rebuild_score=data['cxcj'], college=data['teach_college'])
+            self.cur.execute('SET character_set_connection=utf8;')
+            res = self.exec(sql_str)
+            return res
+
+    def selectScore(self,  account, data):
+        if data['term'] is None and data['year'] is None:
+            sql_str = "SELECT * FROM grade WHERE `student_id` = '{account}'".format(account=account)
+        else:
+            if data['term'] is None:
+                sql_str = "SELECT * FROM grade WHERE `school_year` = '{year}' AND  `student_id` = '{account}'".format(year=data['year'], account=account)
+            elif data['year'] is None:
+                sql_str = "SELECT * FROM grade WHERE  `term` = '{term}' AND  `student_id` = '{account}'".format(term=data['term'], account=account)
+            else:
+                sql_str = "SELECT * FROM grade WHERE `school_year` = '{year}' AND `term` = '{term}' AND  `student_id` = '{account}'".format(year=data['year'], term=data['term'], account=account)
+        res = self.query(sql_str)
+        return res
 
 
-
+class UseApply(object):
+    def getScore(self, account, password, score_year='', score_term='',):
+        db = MysqlUse()
+        # i = ''
+        user = school.user_login(account, password)
+        school_data = user.get_score(score_year, score_term, use_api=3)
+        res_allcollege_1 = db.updateStudentMessage('student_id', account, 'all_point', school_data['all_college']['pjzjd'])
+        if not res_allcollege_1:
+            return False
+        res_allcollege_2 = db.updateStudentMessage('student_id', account, 'major_number', school_data['all_college']['zyzrs'])
+        if not res_allcollege_2:
+            return False
+        for key_year, value in school_data['score_info'].items():
+            for key_term, value_data in value.items():
+                for res in value_data:
+                    sql_res = db.insertScore(key_year, key_term, res, account)
+                    # i = i + sql_res
+                    if sql_res is None:
+                        return sql_res
+        return True
