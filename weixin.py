@@ -149,10 +149,17 @@ class MysqlUse(object):
         sql_str = "UPDATE student SET `{modify_title}` = '{modify_object}' WHERE `{query_title}` = '{query_object}'".format(modify_title=modify_title, modify_object=modify_object, query_title=query_title,query_object=query_object)
         res = self.exec(sql_str)
 
+        return sql_str
+
+    def untyingStudent(self, query_title, query_object):
+        sql_str = "UPDATE student SET `student_id` = NULL ,`password` = NULL ,`college` = NULL ,`major` = NULL ,`full_name` = NULL ,`classroom` = NULL ,`all_point` = NULL ,`major_number` = NULL WHERE `{query_title}` = '{query_object}'".format(query_title=query_title,query_object=query_object)
+        res = self.exec(sql_str)
+
         return res
 
+
     def deleteStudentMessage(self, student_id):
-        sql_str = "DELETE FROM student WHERE  `student_id` = '{student_id}'".format(student_id=student_id)
+        sql_str = "DELETE FROM score WHERE  `student_id` = '{student_id}'".format(student_id=student_id)
         res = self.exec(sql_str)
 
         return res
