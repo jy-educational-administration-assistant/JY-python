@@ -1,17 +1,27 @@
+import json
+import pymysql
 import urllib.request
 import urllib.parse
-# from flask import Flask, request, redirect, jsonify
-from school_api import SchoolClient
-import json
+from redis import Redis
 from redis import StrictRedis
-import pymysql
+from school_api import SchoolClient
 #如果上传到服务器，注释sys,path.append
 import sys
 sys.path.append('D:\枼玉清的文档\python\jws')
 from database import HostAccount
+from school_api.session.redisstorage import RedisStorage
 
+redis = Redis()
+session = RedisStorage(redis)
+conf = {
+    "url": 'http://jws.hebiace.edu.cn/default2.aspx',
+    "session": session,
+    'name': '河北建筑工程学院',
+    'code': 'hbjg'
+}
 
-school = SchoolClient('http://jws.hebiace.edu.cn/default2.aspx')
+school = SchoolClient(**conf)
+
 appID = "wx1b26e33bc6d53859"
 AppSecret = "fd82140b782c9508b76fa276f13a8d44"
 
@@ -227,3 +237,57 @@ class UseApply(object):
                     if sql_res is None:
                         return sql_res
         return True
+
+    def manageScore(self, data):
+        res_score = []
+        for x in range(len(data)):
+            data_res = {
+                'term': data[x][0],
+                'year': data[x][1],
+                'code': data[x][2],
+                'name': data[x][3],
+                'credit': data[x][4],
+                'score': data[x][5],
+                'usual_score': data[x][6],
+                'makeup_score': data[x][7],
+                'term_end_score': data[x][8],
+                'rebuild_score': data[x][9],
+                'nature': data[x][10],
+                'college': data[x][11],
+            }
+            res_score.append(data_res)
+
+        return res_score
+
+
+class SchoolApiGet(object):
+    def get_student(self, account, password):
+        user = school.user_login(account, password)
+        for i in 'res':
+            student_info = user.get_student_info()
+
+        return student_info
+
+    def get_score_info(self, account, password, score_year=0, score_term=0):
+        user = school.user_login(account, password)
+        school_data = user.get_score(score_year, score_term, use_api=3)
+
+        return school_data
+
+    def validate_user(self, account, password):
+        user = school.user_login(account, password, use_cookie_login=False)
+        res = hasattr(user, 'tip')
+        if res is True:
+            data = {
+                'code': 1,
+                'msg': user.tip
+            }
+            return data
+        else:
+            return False
+
+    def get_schedule_info(self, account, password, schedule_year, schedule_term, schedule_type=1):
+        user = school.user_login(account, password)
+        schedule_data = user.get_schedule(schedule_year, schedule_term, schedule_type)
+
+        return schedule_data

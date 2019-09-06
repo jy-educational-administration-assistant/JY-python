@@ -1,25 +1,12 @@
 from __future__ import absolute_import, unicode_literals
-from weixin import WeChat, RedisUse, MysqlUse, UseApply
+from weixin import WeChat, RedisUse, MysqlUse, UseApply, SchoolApiGet
 from flask import Flask, request, jsonify, redirect, make_response
-from school_api import SchoolClient
-from redis import Redis
-from school_api.session.redisstorage import RedisStorage
 import time
 import hashlib
 import json
 
 app = Flask(__name__)
 url = 'http://myserver.qihaoyu.tech'
-redis = Redis()
-session = RedisStorage(redis)
-conf = {
-    "url": 'http://jws.hebiace.edu.cn/default2.aspx',
-    "session": session,
-    'name': '河北建筑工程学院',
-    'code': 'hbjg'
-}
-
-school = SchoolClient(**conf)
 
 
 @app.route('/get_student_info')
@@ -37,11 +24,11 @@ def get_student_info():
                 'code': 2,
             })
         db = MysqlUse()
-        i = 0
+        sch = SchoolApiGet()
         res = db.selectStudentMessage('openid', openid)
         if not res:
             return jsonify({'code': 1, 'msg': 'sql错误，请联系管理员'})
-        if res[0][2] or res[0][8] or res[0][9] or res[0][10]:
+        if res[0][2] and res[0][8] and res[0][9] and res[0][10] and res[0][11] and res[0][12]:
             data_res = {
                 "student_name": res[0][9],
                 "student_xy": res[0][8],
@@ -57,9 +44,7 @@ def get_student_info():
         else:
             account = res[0][0]
             password = res[0][1]
-            user = school.user_login(account, password)
-            for i in 'res':
-                student_info = user.get_student_info()
+            student_info = sch.get_student(account, password)
             res_sql = db.insertStudentOther(openid, student_info)
             if res_sql:
                 res = db.selectStudentMessage('openid', openid)
@@ -73,6 +58,7 @@ def get_student_info():
                 data = {
                     'code': 0,
                     'data': res_data,
+                    'name': None,
                 }
                 return jsonify(data)
             else:
@@ -98,8 +84,8 @@ def get_score():
                 'code': 2,
             })
         db = MysqlUse()
+        sch = SchoolApiGet()
         use = UseApply()
-        res_score = []
         res = db.selectStudentMessage('openid', openid)
         if not res:
             return jsonify({'code': 1, 'msg': 'sql错误，请联系管理员'})
@@ -119,23 +105,7 @@ def get_score():
                 sql_res_score = db.selectScore(account, data_query_score)
                 if sql_res_score:
                     sql_res_point = db.selectStudentMessage('student_id', account)
-                    for x in range(len(sql_res_score)):
-                        # print(sql_res_score[x][1])
-                        data_res = {
-                            'term': sql_res_score[x][0],
-                            'year': sql_res_score[x][1],
-                            'code': sql_res_score[x][2],
-                            'name': sql_res_score[x][3],
-                            'credit': sql_res_score[x][4],
-                            'score': sql_res_score[x][5],
-                            'usual_score': sql_res_score[x][6],
-                            'makeup_score': sql_res_score[x][7],
-                            'term_end_score': sql_res_score[x][8],
-                            'rebuild_score': sql_res_score[x][9],
-                            'nature': sql_res_score[x][10],
-                            'college': sql_res_score[x][11],
-                        }
-                        res_score.append(data_res)
+                    res_score = use.manageScore(sql_res_score)
                     data = {
                         'code': 0,
                         'data': res_score,
@@ -158,23 +128,7 @@ def get_score():
             if point:
                 sql_res_score = db.selectScore(account, data_query_score)
                 sql_res_point = db.selectStudentMessage('student_id', account)
-                for x in range(len(sql_res_score)):
-                    # print(sql_res_score[x][1])
-                    data_res = {
-                        'term': sql_res_score[x][0],
-                        'year': sql_res_score[x][1],
-                        'code': sql_res_score[x][2],
-                        'name': sql_res_score[x][3],
-                        'credit': sql_res_score[x][4],
-                        'score': sql_res_score[x][5],
-                        'usual_score': sql_res_score[x][6],
-                        'makeup_score': sql_res_score[x][7],
-                        'term_end_score': sql_res_score[x][8],
-                        'rebuild_score': sql_res_score[x][9],
-                        'nature': sql_res_score[x][10],
-                        'college': sql_res_score[x][11],
-                    }
-                    res_score.append(data_res)
+                res_score = use.manageScore(sql_res_score)
                 data = {
                     'code': 0,
                     'data': res_score,
@@ -182,33 +136,16 @@ def get_score():
                 }
                 return jsonify(data)
             else:
-                user = school.user_login(account, password)
-                school_data = user.get_score(score_year, score_term, use_api=3)
-                res_allcollege_1 = db.updateStudentMessage('student_id', account, 'all_point', school_data['all_college']['pjzjd'])
-                if not res_allcollege_1:
+                school_data = sch.get_score_info(account, password)
+                res_allcollege_point = db.updateStudentMessage('student_id', account, 'all_point', school_data['all_college']['pjzjd'])
+                if not res_allcollege_point:
                     return jsonify({'code': 1, 'msg': 'sql数据库错误'})
-                res_allcollege_2 = db.updateStudentMessage('student_id', account, 'major_number', school_data['all_college']['zyzrs'])
-                if not res_allcollege_2:
+                res_allcollege_major_num = db.updateStudentMessage('student_id', account, 'major_number', school_data['all_college']['zyzrs'])
+                if not res_allcollege_major_num:
                     return jsonify({'code': 1, 'msg': 'sql数据库错误'})
                 sql_res_score = db.selectScore(account, data_query_score)
                 sql_res_point = db.selectStudentMessage('student_id', account)
-                for x in range(len(sql_res_score)):
-                    # print(sql_res_score[x][1])
-                    data_res = {
-                        'term': sql_res_score[x][0],
-                        'year': sql_res_score[x][1],
-                        'code': sql_res_score[x][2],
-                        'name': sql_res_score[x][3],
-                        'credit': sql_res_score[x][4],
-                        'score': sql_res_score[x][5],
-                        'usual_score': sql_res_score[x][6],
-                        'makeup_score': sql_res_score[x][7],
-                        'term_end_score': sql_res_score[x][8],
-                        'rebuild_score': sql_res_score[x][9],
-                        'nature': sql_res_score[x][10],
-                        'college': sql_res_score[x][11],
-                    }
-                    res_score.append(data_res)
+                res_score = use.manageScore(sql_res_score)
                 data = {
                     'code': 0,
                     'data': res_score,
@@ -221,8 +158,8 @@ def get_score():
 def get_schedule():
     schedule_year = request.args.get('year')
     schedule_term = request.args.get('term')
-    schedule_type = 1
     sr = RedisUse()
+    sch = SchoolApiGet()
     token = request.cookies.get('token')
     if not token:
         return jsonify({
@@ -238,8 +175,7 @@ def get_schedule():
         res = db.selectStudentMessage('openid', openid)
         account = res[0][0]
         password = res[0][1]
-        user = school.user_login(account, password)
-        schedule_data = user.get_schedule(schedule_year, schedule_term, schedule_type)
+        schedule_data = sch.get_schedule_info(account, password, schedule_year, schedule_term)
         return jsonify(schedule_data)
 
 
@@ -282,8 +218,8 @@ def get_code():
                         'msg': 'redis数据库错误，请联系管理员'
                      }
                     return jsonify(data)
-                redict_url = url
-                obj = redirect(redict_url)
+                redirect_url = url
+                obj = redirect(redirect_url)
                 obj.set_cookie('token', token)
 
                 return obj
@@ -326,14 +262,14 @@ def user_login():
                 }
                 return jsonify(data)
             else:
-                    data_isbinding = {
-                        'isBind': 0,
-                    }
-                    data = {
-                        'code': 0,
-                        'data': data_isbinding,
-                    }
-                    return jsonify(data)
+                data_isbinding = {
+                    'isBind': 0,
+                }
+                data = {
+                    'code': 0,
+                    'data': data_isbinding,
+                }
+                return jsonify(data)
         else:
             data_isbinding = {
                 'isBind': 0,
@@ -349,6 +285,7 @@ def user_login():
 def user_binding():
     sr = RedisUse()
     db = MysqlUse()
+    sch = SchoolApiGet()
     token = request.cookies.get('token')
     if not token:
         return jsonify({
@@ -362,19 +299,14 @@ def user_binding():
             })
         times = str(time.time()).split('.', 1)
         times = times[0]
-        student_id = request.form.get('account')
+        account = request.form.get('account')
         password = request.form.get('password')
-        user = school.user_login(student_id, password, use_cookie_login=False)
-        res = hasattr(user, 'tip')
-        if res is True:
-            data = {
-                'code': 1,
-                'msg': user.tip
-            }
-            return jsonify(data)
+        res = sch.validate_user(account, password)
+        if res:
+            return jsonify(res)
         res_sel = db.selectStudentMessage('openid', openid)
         if res_sel:
-            res_account = db.updateStudentMessage('openid', openid, 'student_id', student_id)
+            res_account = db.updateStudentMessage('openid', openid, 'student_id', account)
             if not res_account:
                 return jsonify({'code': 1, 'msg': 'sql错误，请联系管理员'})
             res_password = db.updateStudentMessage('openid', openid, 'password', password)
@@ -391,7 +323,7 @@ def user_binding():
                 return jsonify(data_redis_none)
             else:
                 data_redis = {
-                    'student_id': student_id,
+                    'student_id': account,
                     'password': password,
                     'binding_time': times,
                     'major': '',
@@ -455,14 +387,19 @@ def test():
     use = UseApply()
     db = MysqlUse()
     res = db.selectStudentMessage('openid', openid)
-    account = res[0][0]
+    # account = res[0][0]
+    account = '20173250131'
     password = res[0][1]
-    user = school.user_login(account, password)
-    schedule_data = user.get_schedule(schedule_year, schedule_term, schedule_type)
+    sch = SchoolApiGet()
+    res = sch.validate_user(account, password)
+    # res = sch.get_student(account, password)
+    # res = sch.get_score_info(account, password)
+    # user = school.user_login(account, password)
+    # schedule_data = user.get_schedule(schedule_year, schedule_term, schedule_type)
     # for key, value in schedule_data['schedule'].items():
     #     print(key, value)
     # print(type(schedule_data['schedule']))
-    return jsonify(schedule_data)
+    return jsonify(res)
 
 
 @app.route('/hello', methods=['GET'])
