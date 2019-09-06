@@ -1,7 +1,7 @@
 import json
 import pymysql
-import urllib.request
 import urllib.parse
+import urllib.request
 from redis import Redis
 from redis import StrictRedis
 from school_api import SchoolClient
@@ -216,6 +216,17 @@ class MysqlUse(object):
         res = self.query(sql_str)
         return res
 
+    def insertSchedule(self, year, term, day, lesson, classroom, data):
+        sql_str = "INSERT INTO course(course_name,place,class_week,teacher,classroom,day,lesson,school_year,term,color,time,section)VALUES('{course_name}','{place}','{class_week}','{teacher}','{classroom}','{day}','{lesson}','{school_year}','{term}','{color}','{time}','{section}')".format(course_name=data['name'], place=data['place'], classroom=classroom, class_week=data['weeks_text'], teacher=data['teacher'], day=day, lesson=lesson, school_year=year, term=term, color=data['color'], time=data['time'], section=data['section'])
+        res = self.exec(sql_str)
+
+        return res
+
+    def selectSchedule(self, classroom, year, term):
+        sql_str = "SELECT * FROM course WHERE `school_year` = '{year}' AND `term` = '{term}' AND  `classroom` = '{classroom}'".format(year=year, term=term, classroom=classroom)
+        res = self.query(sql_str)
+        return res
+
 
 class UseApply(object):
     def getScore(self, account, password, score_year='', score_term='',):
@@ -238,6 +249,19 @@ class UseApply(object):
                         return sql_res
         return True
 
+    def getSchedule(self, account, password, schedule_year, schedule_term, classroom):
+        db = MysqlUse()
+        sch = SchoolApiGet()
+        res_schedule = sch.get_schedule_info(account, password, schedule_year, schedule_term)
+        for day in range(len(res_schedule['schedule'])):
+            for lesson in range(len(res_schedule['schedule'][day])):
+                for x in range(len(res_schedule['schedule'][day][lesson])):
+                    res_sql = db.insertSchedule(res_schedule['schedule_year'],  res_schedule['schedule_term'], day, lesson, classroom,  res_schedule['schedule'][day][lesson][x])
+                    if not res_sql:
+                        return False
+
+        return res_schedule
+
     def manageScore(self, data):
         res_score = []
         for x in range(len(data)):
@@ -259,11 +283,32 @@ class UseApply(object):
 
         return res_score
 
+    def mangageSchedule(self,data):
+        res_schedule = []
+        for x in range(len(data)):
+            data_res = {
+                'name': data[x][0],
+                'place': data[x][1],
+                'weeks_text': data[x][2],
+                'teacher': data[x][3],
+                'classroom': data[x][4],
+                'day': data[x][5],
+                'lesson': data[x][6],
+                'year': data[x][7],
+                'term': data[x][8],
+                'color': data[x][9],
+                'time': data[x][10],
+                'section': data[x][11],
+            }
+            res_schedule.append(data_res)
+
+        return res_schedule
+
 
 class SchoolApiGet(object):
     def get_student(self, account, password):
         user = school.user_login(account, password)
-        for i in 'res':
+        for i in 're':
             student_info = user.get_student_info()
 
         return student_info

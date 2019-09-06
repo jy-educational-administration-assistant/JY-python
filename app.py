@@ -1,23 +1,25 @@
 from __future__ import absolute_import, unicode_literals
 from weixin import WeChat, RedisUse, MysqlUse, UseApply, SchoolApiGet
 from flask import Flask, request, jsonify, redirect, make_response
-import time
+import datetime
 import hashlib
+import time
 import json
+
 
 app = Flask(__name__)
 url = 'http://myserver.qihaoyu.tech'
-
+    
 
 @app.route('/get_student_info')
 def get_student_info():
-    sr = RedisUse()
     token = request.cookies.get('token')
     if not token:
         return jsonify({
             'code': 2,
         })
     else:
+        sr = RedisUse()
         openid = sr.getTokenOpenid(token)
         if not openid:
             return jsonify({
@@ -58,7 +60,6 @@ def get_student_info():
                 data = {
                     'code': 0,
                     'data': res_data,
-                    'name': None,
                 }
                 return jsonify(data)
             else:
@@ -71,13 +72,13 @@ def get_student_info():
 
 @app.route('/get_score')
 def get_score():
-    sr = RedisUse()
     token = request.cookies.get('token')
     if not token:
         return jsonify({
             'code': 2,
         })
     else:
+        sr = RedisUse()
         openid = sr.getTokenOpenid(token)
         if not openid:
             return jsonify({
@@ -156,27 +157,65 @@ def get_score():
 
 @app.route('/get_schedule')
 def get_schedule():
-    schedule_year = request.args.get('year')
-    schedule_term = request.args.get('term')
-    sr = RedisUse()
-    sch = SchoolApiGet()
     token = request.cookies.get('token')
     if not token:
         return jsonify({
             'code': 2,
         })
     else:
+        sr = RedisUse()
         openid = sr.getTokenOpenid(token)
         if not openid:
             return jsonify({
                 'code': 2,
             })
+        schedule_year = request.args.get('year')
+        schedule_term = request.args.get('term')
+        year = datetime.datetime.now().year
+        month = datetime.datetime.now().month
+        if schedule_term or schedule_year:
+            if schedule_year:
+                if 2 <= month <= 7:
+                    schedule_term = 2
+                else:
+                    schedule_term = 1
+            else:
+                schedule_year = "'" + str(year) + "-" + str(year - 1) + "'"
+        else:
+            schedule_year = "" + str(year) + "-" + str(year + 1) + ""
+            if 2 <= month <= 7:
+                schedule_term = 2
+            else:
+                schedule_term = 1
+        use = UseApply()
         db = MysqlUse()
         res = db.selectStudentMessage('openid', openid)
         account = res[0][0]
         password = res[0][1]
-        schedule_data = sch.get_schedule_info(account, password, schedule_year, schedule_term)
-        return jsonify(schedule_data)
+        classroom = res[0][10]
+        validate_schedule = db.selectSchedule(classroom, schedule_year, schedule_term)
+        if not validate_schedule:
+            sql_reschedule = use.getSchedule(account, password, schedule_year, schedule_term, classroom)
+            if not sql_reschedule:
+                data = {
+                    'code': 1,
+                    'msg': 'sql数据库错误，请联系管理员'
+                }
+                return jsonify(data)
+            sql_res_schedule = db.selectSchedule(classroom, schedule_year, schedule_term)
+            res_schedule = use.mangageSchedule(sql_res_schedule)
+            data = {
+                'code': 0,
+                'data': res_schedule,
+            }
+            return jsonify(data)
+        else:
+            res_schedule = use.mangageSchedule(validate_schedule)
+            data = {
+                'code': 0,
+                'data': res_schedule,
+            }
+            return jsonify(data)
 
 
 @app.route('/set_code')
@@ -186,7 +225,6 @@ def set_code():
     scope = 'snsapi_userinfo'
     wx = WeChat()
     weixin = wx.setCode(pre_url, scope, again_url)
-    print(weixin)
     return redirect(weixin)
 
 
@@ -382,24 +420,51 @@ def test():
     openid = 'ocyjVv9AuNf4JVjja6zlIIY5IfO8'
     schedule_year = request.args.get('year')
     schedule_term = request.args.get('term')
-    schedule_type = 1
-    db = MysqlUse()
+    year = datetime.datetime.now().year
+    month = datetime.datetime.now().month
+    if schedule_term or schedule_year:
+        if schedule_year:
+            if 2 <= month <= 7:
+                schedule_term = 2
+            else:
+                schedule_term = 1
+        else:
+            schedule_year = "'" + str(year) + "-" + str(year - 1) + "'"
+    else:
+        schedule_year = ""+str(year)+"-"+str(year+1)+""
+        if 2 <= month <= 7:
+            schedule_term = 2
+        else:
+            schedule_term = 1
     use = UseApply()
     db = MysqlUse()
     res = db.selectStudentMessage('openid', openid)
-    # account = res[0][0]
-    account = '20173250131'
+    account = res[0][0]
     password = res[0][1]
-    sch = SchoolApiGet()
-    res = sch.validate_user(account, password)
-    # res = sch.get_student(account, password)
-    # res = sch.get_score_info(account, password)
-    # user = school.user_login(account, password)
-    # schedule_data = user.get_schedule(schedule_year, schedule_term, schedule_type)
-    # for key, value in schedule_data['schedule'].items():
-    #     print(key, value)
-    # print(type(schedule_data['schedule']))
-    return jsonify(res)
+    classroom = res[0][10]
+    validate_schedule = db.selectSchedule(classroom, schedule_year, schedule_term)
+    if not validate_schedule:
+        sql_reschedule = use.getSchedule(account, password, schedule_year, schedule_term, classroom)
+        if not sql_reschedule:
+            data = {
+                'code': 1,
+                'msg': 'sql数据库错误，请联系管理员'
+            }
+            return jsonify(data)
+        sql_res_schedule = db.selectSchedule(classroom, schedule_year, schedule_term)
+        res_schedule = use.mangageSchedule(sql_res_schedule)
+        data = {
+            'code': 0,
+            'data': res_schedule,
+        }
+        return jsonify(data)
+    else:
+        res_schedule = use.mangageSchedule(validate_schedule)
+        data = {
+            'code': 0,
+            'data': res_schedule,
+        }
+        return jsonify(data)
 
 
 @app.route('/hello', methods=['GET'])
