@@ -5,7 +5,6 @@ from include_file.redisuse import RedisUse
 from include_file.sqluse import MysqlUse
 from include_file.weixin import WeChat
 from include_file.user import UseApply
-import datetime
 import hashlib
 import time
 import json
@@ -51,6 +50,11 @@ def get_student_info():
             account = res[0][1]
             password = res[0][2]
             student_info = sch.get_student(account, password)
+            if 'error' in student_info:
+                return jsonify({
+                    'code': 1,
+                    'msg': student_info
+                })
             res_sql = db.insertStudentOther(openid, student_info)
             if res_sql:
                 res = db.selectStudentMessage('openid', openid)
@@ -124,10 +128,16 @@ def get_score():
                     }
                     return jsonify(data)
             else:
-                data = {
-                    'code': 1,
-                    'msg': '数据库错误，请联系管理员'
-                }
+                if 'error' in sql_res:
+                    data = {
+                        'code': 1,
+                        'msg': sql_res,
+                    }
+                else:
+                    data = {
+                        'code': 1,
+                        'msg': '数据库错误，请联系管理员'
+                    }
                 return jsonify(data)
         else:
             if point:
@@ -175,31 +185,19 @@ def get_schedule():
             })
         schedule_year = request.args.get('year')
         schedule_term = request.args.get('term')
-        year = datetime.datetime.now().year
-        month = datetime.datetime.now().month
-        if schedule_term or schedule_year:
-            if schedule_year:
-                if 2 <= month <= 7:
-                    schedule_term = 2
-                else:
-                    schedule_term = 1
-            else:
-                schedule_year = "'" + str(year) + "-" + str(year - 1) + "'"
-        else:
-            schedule_year = "" + str(year) + "-" + str(year + 1) + ""
-            if 2 <= month <= 7:
-                schedule_term = 2
-            else:
-                schedule_term = 1
+        if schedule_term is None or schedule_year is None:
+            return jsonify({'code': 1, 'msg': '参数错误'})
         use = UseApply()
         db = MysqlUse()
         res = db.selectStudentMessage('openid', openid)
-        account = res[0][0]
-        password = res[0][1]
-        classroom = res[0][10]
+        account = res[0][1]
+        password = res[0][2]
+        classroom = res[0][8]
         validate_schedule = db.selectSchedule(classroom, schedule_year, schedule_term)
         if not validate_schedule:
-            sql_reschedule = use.getSchedule(account, password, schedule_year, schedule_term, classroom)
+            sql_reschedule = use.getSchedule(account, password, classroom, schedule_year, schedule_term)
+            if 'error' in sql_reschedule:
+                return jsonify({'code': 1, 'msg': sql_reschedule})
             if not sql_reschedule:
                 data = {
                     'code': 1,
@@ -421,61 +419,20 @@ def user_untying():
 
 @app.route('/test', methods=['POST', 'GET'])
 def test():
-    # score_year = request.args.get('year')
-    # score_term = request.args.get('term')
-    openid = 'ocyjVv9AuNf4JVjja6zlIIY5IfO8'
-    schedule_year = request.args.get('year')
-    schedule_term = request.args.get('term')
-    year = datetime.datetime.now().year
-    month = datetime.datetime.now().month
-    if schedule_term or schedule_year:
-        if schedule_year:
-            if 2 <= month <= 7:
-                schedule_term = 2
-            else:
-                schedule_term = 1
-        else:
-            schedule_year = "'" + str(year) + "-" + str(year - 1) + "'"
-    else:
-        schedule_year = ""+str(year)+"-"+str(year+1)+""
-        if 2 <= month <= 7:
-            schedule_term = 2
-        else:
-            schedule_term = 1
-    use = UseApply()
-    db = MysqlUse()
-    res = db.selectStudentMessage('openid', openid)
-    account = res[0][0]
-    password = res[0][1]
-    classroom = res[0][10]
-    validate_schedule = db.selectSchedule(classroom, schedule_year, schedule_term)
-    if not validate_schedule:
-        sql_reschedule = use.getSchedule(account, password, schedule_year, schedule_term, classroom)
-        if not sql_reschedule:
-            data = {
-                'code': 1,
-                'msg': 'sql数据库错误，请联系管理员'
-            }
-            return jsonify(data)
-        sql_res_schedule = db.selectSchedule(classroom, schedule_year, schedule_term)
-        res_schedule = use.mangageSchedule(sql_res_schedule)
-        data = {
-            'code': 0,
-            'data': res_schedule,
-        }
-        return jsonify(data)
-    else:
-        res_schedule = use.mangageSchedule(validate_schedule)
-        data = {
-            'code': 0,
-            'data': res_schedule,
-        }
-        return jsonify(data)
+    # db = MysqlUse()
+    # use = UseApply()
+    # all_student = db.selectStudentMessage()
+    # for num in all_student:
+    #     # print(num[0], num[1], num[2], num[8])
+    #     res = use.updateSechdeuleinformation(num[1], num[2], num[8])
+    return jsonify(1)
 
 
 @app.route('/hello', methods=['GET'])
 def hello():
-    return 'hello world'
+    sch = SchoolApiGet()
+    res = sch.get_schedule_info('20173250131', '350426yyq', '2019-2020', 1)
+    return jsonify(res)
 
 
 @app.route('/test_set_cookie', methods=['GET'])

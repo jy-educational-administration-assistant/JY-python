@@ -88,16 +88,16 @@ class MysqlUse(object):
             sql_str = "SELECT * FROM grade WHERE `account` = '{account}'".format(account=account)
         else:
             if data['term'] is None:
-                sql_str = "SELECT * FROM grade WHERE `year` = '{year}' AND  `account` = '{account}'".format(year=data['year'], account=account)
+                sql_str = "SELECT * FROM grade WHERE `account` = '{account}' AND `year` = '{year}' ".format(year=data['year'], account=account)
             elif data['year'] is None:
-                sql_str = "SELECT * FROM grade WHERE  `term` = '{term}' AND  `account` = '{account}'".format(term=data['term'], account=account)
+                sql_str = "SELECT * FROM grade WHERE  `account` = '{account}' AND  `term` ='{term}' ".format(term=data['term'], account=account)
             else:
-                sql_str = "SELECT * FROM grade WHERE `year` = '{year}' AND `term` = '{term}' AND  `account` = '{account}'".format(year=data['year'], term=data['term'], account=account)
+                sql_str = "SELECT * FROM grade WHERE `account` = '{account}'AND `term` = '{term}' AND `year` = '{year}'".format(year=data['year'], term=data['term'], account=account)
         res = self.query(sql_str)
         return res
 
     def insertSchedule(self, year, term, day, lesson, classroom, data):
-        sql_str = "INSERT INTO course(course_name,place,class_week,teacher,classroom,day,lesson,school_year,term,color,time,section)VALUES('{course_name}','{place}','{class_week}','{teacher}','{classroom}','{day}','{lesson}','{school_year}','{term}','{color}','{time}','{section}')".format(course_name=data['name'], place=data['place'], classroom=classroom, class_week=data['weeks_text'], teacher=data['teacher'], day=day, lesson=lesson, school_year=year, term=term, color=data['color'], time=data['time'], section=data['section'])
+        sql_str = "INSERT INTO course(course_name,place,class_week,teacher,classroom,day,lesson,school_year,term,color,time,section,weeks_arr)VALUES('{course_name}','{place}','{class_week}','{teacher}','{classroom}','{day}','{lesson}','{school_year}','{term}','{color}','{time}','{section}','{weeks_arr}')".format(course_name=data['name'], place=data['place'], classroom=classroom, class_week=data['weeks_text'], teacher=data['teacher'], day=day, lesson=lesson, school_year=year, term=term, color=data['color'], time=data['time'], section=data['section'], weeks_arr=''.join(str(data['weeks_arr'])))
         res = self.exec(sql_str)
 
         return res
