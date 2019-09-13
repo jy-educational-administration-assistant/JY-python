@@ -9,8 +9,8 @@ class UseApply(object):
         sch = SchoolApiGet()
         i = 0
         school_data = sch.get_score_info(account, password, score_year, score_term)
-        while 'error' in school_data:
-            school_data = sch.get_schedule_info(account, password, score_year, score_term)
+        while 'score_info' not in school_data:
+            school_data = sch.get_score_info(account, password, score_year, score_term)
             i = i + 1
             if i >= 4:
                 return school_data
@@ -34,7 +34,7 @@ class UseApply(object):
         i = 0
         sch = SchoolApiGet()
         res_schedule = sch.get_schedule_info(account, password, schedule_year, schedule_term)
-        while 'error' in res_schedule:
+        while 'schedule' not in res_schedule:
             res_schedule = sch.get_schedule_info(account, password, schedule_year, schedule_term)
             i = i + 1
             if i >= 4:

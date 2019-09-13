@@ -46,7 +46,7 @@ class MysqlUse(object):
         sql_str = "UPDATE student SET `{modify_title}` = '{modify_object}' WHERE `{query_title}` = '{query_object}'".format(modify_title=modify_title, modify_object=modify_object, query_title=query_title,query_object=query_object)
         res = self.exec(sql_str)
 
-        return sql_str
+        return res
 
     def untyingStudent(self, query_title, query_object):
         sql_str = "UPDATE student SET `account` = NULL ,`password` = NULL ,`college` = NULL ,`major` = NULL ,`full_name` = NULL ,`classroom` = NULL ,`all_point` = NULL ,`major_number` = NULL WHERE `{query_title}` = '{query_object}'".format(query_title=query_title,query_object=query_object)
@@ -85,14 +85,14 @@ class MysqlUse(object):
 
     def selectScore(self,  account, data):
         if data['term'] is None and data['year'] is None:
-            sql_str = "SELECT * FROM grade WHERE `account` = '{account}'".format(account=account)
+            sql_str = "SELECT * FROM grade WHERE `account` = '{account}' ORDER BY year DESC ".format(account=account)
         else:
             if data['term'] is None:
-                sql_str = "SELECT * FROM grade WHERE `account` = '{account}' AND `year` = '{year}' ".format(year=data['year'], account=account)
+                sql_str = "SELECT * FROM grade WHERE `account` = '{account}' AND `year` = '{year}' ORDER BY year DESC ".format(year=data['year'], account=account)
             elif data['year'] is None:
-                sql_str = "SELECT * FROM grade WHERE  `account` = '{account}' AND  `term` ='{term}' ".format(term=data['term'], account=account)
+                sql_str = "SELECT * FROM grade WHERE  `account` = '{account}' AND  `term` ='{term}' ORDER BY year DESC ".format(term=data['term'], account=account)
             else:
-                sql_str = "SELECT * FROM grade WHERE `account` = '{account}'AND `term` = '{term}' AND `year` = '{year}'".format(year=data['year'], term=data['term'], account=account)
+                sql_str = "SELECT * FROM grade WHERE `account` = '{account}'AND `term` = '{term}' AND `year` = '{year}'ORDER BY year DESC ".format(year=data['year'], term=data['term'], account=account)
         res = self.query(sql_str)
         return res
 

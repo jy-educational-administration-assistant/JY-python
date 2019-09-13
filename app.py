@@ -11,7 +11,7 @@ import json
 
 
 app = Flask(__name__)
-url = 'http://myserver.qihaoyu.tech'
+url = 'http://jws.qihaoyu.tech'
 
 
 @app.route('/get_student_info')
@@ -97,7 +97,7 @@ def get_score():
         use = UseApply()
         res = db.selectStudentMessage('openid', openid)
         if not res:
-            return jsonify({'code': 1, 'msg': 'sql错误，请联系管理员'})
+            return jsonify({'code': 1, 'msg': '查找sql错误，请联系管理员'})
         account = res[0][1]
         password = res[0][2]
         point = res[0][9]
@@ -124,20 +124,15 @@ def get_score():
                 else:
                     data = {
                         'code': 1,
-                        'msg': 'sql错误，请联系管理员'
+                        'msg': '查找成绩sql错误，请联系管理员',
+                        'other': sql_res,
                     }
                     return jsonify(data)
             else:
-                if 'error' in sql_res:
-                    data = {
-                        'code': 1,
-                        'msg': sql_res,
-                    }
-                else:
-                    data = {
-                        'code': 1,
-                        'msg': '数据库错误，请联系管理员'
-                    }
+                data = {
+                    'code': 1,
+                    'msg': sql_res
+                }
                 return jsonify(data)
         else:
             if point:
@@ -196,8 +191,6 @@ def get_schedule():
         validate_schedule = db.selectSchedule(classroom, schedule_year, schedule_term)
         if not validate_schedule:
             sql_reschedule = use.getSchedule(account, password, classroom, schedule_year, schedule_term)
-            if 'error' in sql_reschedule:
-                return jsonify({'code': 1, 'msg': sql_reschedule})
             if not sql_reschedule:
                 data = {
                     'code': 1,
@@ -222,26 +215,21 @@ def get_schedule():
 
 @app.route('/set_code')
 def set_code():
-    pre_url = url + '/api/get_code'
-    again_url = '?validate=userinfo&url='+url+'/api/set_code'
+    pre_url = 'http://m.hebiace.net/app/wxGetUserInfo/getUserInfo.php'
+    redirect_url = '?validate=userinfo&url=jws.qihaoyu.tech/api/get_code'
     scope = 'snsapi_userinfo'
     wx = WeChat()
-    weixin = wx.setCode(pre_url, scope, again_url)
+    weixin = wx.setCode(pre_url, scope, redirect_url)
     return redirect(weixin)
 
 
 @app.route('/get_code')
 def get_code():
-        code = request.args.get('code')
-        again_url = request.args.get('url')
-        wx = WeChat()
-        sr = RedisUse()
-        res = wx.getCode(code)
-        if res:
-            res = json.loads(res)
-            openid = res['openid']
-            img = res['headimgurl']
-            nickname = res['nickname']
+        openid = request.args.get('openid')
+        if openid:
+            img = request.args.get('img')
+            nickname = request.args.get('name')
+            sr = RedisUse()
             time_now = str(int(time.time()))
             token = hashlib.new('md5', (openid+time_now).encode("utf-8"))
             token = token.hexdigest()
@@ -272,6 +260,7 @@ def get_code():
                 return jsonify(data)
 
         else:
+            again_url = 'https://open.weixin.qq.com/connect/oauth2/authorize?&url=jws.qihaoyu.tech/api/get_code'
             redirect(again_url)
 
 
