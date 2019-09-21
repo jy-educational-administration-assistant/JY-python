@@ -1,6 +1,6 @@
 from include_file.schoolapiget import SchoolApiGet
 from include_file.sqluse import MysqlUse
-import datetime
+from dictdiffer import diff
 
 
 class UseApply(object):
@@ -94,36 +94,98 @@ class UseApply(object):
             res_schedule.append(data_res)
         return res_schedule
 
-    def updateSechdeuleinformation(self, account, password, classroom):
-        db = MysqlUse()
-        use = UseApply()
-        year = datetime.datetime.now().year
-        month = datetime.datetime.now().month
-        if 2 <= month <= 7:
-            term = 2
-        else:
-            term = 1
-        year = "'" + str(year) + "-" + str(year + 1) + "'"
-        sel_schedule = db.selectSchedule(classroom, year, term)
-        if not sel_schedule:
-            insert_schdeule = use.getSchedule(account, password, classroom)
-            if not insert_schdeule:
-                return False
+    def mangageValidateScore(self, data):
+        res_score = []
+        for x in range(len(data)):
+            data_res = {
+                'term': str(data[x][1]),
+                'year': data[x][2],
+                'lesson_code': data[x][3],
+                'lesson_name': data[x][4],
+                'lesson_nature': data[x][5],
+                'credit': data[x][6],
+                'point': data[x][7],
+                'peace_score': data[x][8],
+                'term_end_score': data[x][9],
+                # 'make_up_score': data[x][10],
+                # 'rebuild_score': data[x][11],
+                'all_score': data[x][12],
+                'teach_college': data[x][13],
+            }
+            if data[x][10]:
+                data_res['make_up_score'] = data_res[x][10]
+            elif data[x][11]:
+                data_res['rebuild_score'] = data_res[x][11]
+            res_score.append(data_res)
 
-        return True
+        return res_score
 
     def updateScoreInformation(self, account, password):
         db = MysqlUse()
-        use = UseApply()
         sch = SchoolApiGet()
+        query_obj = {}
+        data_school = []
+        update_score_data = []
+        insert_data = []
+        l = 0
         school_data = sch.get_score_info(account, password)
-        # for key_year, value in school_data['score_info'].items():
-        #     for key_term, value_data in value.items():
-        #         for res in value_data:
-        #             sql_res = db.insertScore(key_year, key_term, res, account)
-        #             # i = i + sql_res
-        #             if not sql_res:
-        #                 return sql_res
-
-
-
+        while 'score_info' not in school_data:
+            school_data = sch.get_score_info(account, password)
+            l += 1
+            if l >= 4:
+                return school_data
+        for key_year, value in school_data['score_info'].items():
+            for key_term, value_data in value.items():
+                for res in value_data:
+                    res['year'] = key_year
+                    res['term'] = key_term
+                    data_school.append(res)
+        sel_data = {
+            'account': account
+        }
+        res_sql_data = db.validateScore(sel_data)
+        res_sql_data = self.mangageValidateScore(res_sql_data)
+        if len(res_sql_data) < len(data_school):
+            for id_data, k in enumerate(data_school):
+                if k not in res_sql_data:
+                    insert_data.append(k)
+                    if 'bkcj' not in k.keys():
+                        k['make_up_score'] = '0'
+                    if 'cxcj' not in k.keys():
+                        k['rebuild_score'] = '0'
+                    k['usual_score'] = k.pop('peace_score')
+                    k['account'] = account
+                    k['type'] = k.pop('lesson_nature')
+                    k['code'] = k.pop('lesson_code')
+                    res_insert = db.insertNewScore(k)
+                    if not res_insert:
+                        return {'error': res_insert}
+            if insert_data:
+                return {'isScore': 0, 'insert': insert_data}
+            else:
+                return {'isScore': 1}
+        else:
+            for i, j in zip(res_sql_data, data_school):
+                different_all = list(diff(j, i))
+                if different_all and 'add' not in different_all[0]:
+                    for ever_row in different_all:
+                        if ever_row[0] is 'change':
+                                i[ever_row[1]] = j[ever_row[1]]
+                                j['change'] = ever_row
+                    i['usual_score'] = i.pop('peace_score')
+                    i['type'] = i.pop('lesson_nature')
+                    query_obj['code'] = i.pop('lesson_code')
+                    query_obj['term'] = i.pop('term')
+                    query_obj['year'] = i.pop('year')
+                    res_sql = db.updateDateScore(query_obj, i)
+                    if not res_sql:
+                        return {'error': res_sql}
+                    i['code'] = query_obj['code']
+                    i['term'] = query_obj['term']
+                    i['year'] = query_obj['year']
+                    i['change'] = j['change']
+                    update_score_data.append(i)
+        if update_score_data:
+            return {'isScore': 0, 'update': update_score_data}
+        else:
+            return {'isScore': 1}

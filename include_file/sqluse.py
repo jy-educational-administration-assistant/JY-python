@@ -60,6 +60,12 @@ class MysqlUse(object):
 
         return res
 
+    def sclectAllStudent(self):
+        sql_str = "SELECT * FROM student"
+        res = self.query(sql_str)
+
+        return res
+
     def insertAdmin(self, data):
         sql_str = "INSERT INTO admin(admin_name,admin_password,time) VALUES('{admin_name}','{admin_password}','{time}')".format(admin_name=data['admin_name'], admin_password=data['admin_password'], time=data['time'])
         res = self.exec(sql_str)
@@ -94,6 +100,61 @@ class MysqlUse(object):
             else:
                 sql_str = "SELECT * FROM grade WHERE `account` = '{account}'AND `term` = '{term}' AND `year` = '{year}'ORDER BY year DESC ".format(year=data['year'], term=data['term'], account=account)
         res = self.query(sql_str)
+        return res
+
+    def putSqlWhereField(self, data):
+        sql_where = ''
+        for title in data:
+            sql = "`{title}` = '{res_data}' AND ".format(title=title, res_data=data[title])
+            sql_where = sql_where + sql
+        sql_where = sql_where[:-4]
+
+        return sql_where
+
+    def putSqlSetField(self, data):
+        sql_where = ''
+        for title in data:
+            sql = "`{title}` = '{res_data}', ".format(title=title, res_data=data[title])
+            sql_where = sql_where + sql
+        sql_where = sql_where[:-2]
+
+        return sql_where
+
+    def validateScore(self, data):
+        sql_where = self.putSqlWhereField(data)
+        sql_table = "SELECT * FROM grade WHERE "
+        sql_str = sql_table + sql_where + ' ORDER BY year, term, code'
+        res = self.query(sql_str)
+
+        return res
+
+    def updateDateScore(self, query_obj, data):
+        sql_str_set = self.putSqlSetField(data)
+        sql_str_where = self.putSqlWhereField(query_obj)
+        sql_str = "UPDATE grade SET " + sql_str_set + " WHERE " + sql_str_where
+        res = self.exec(sql_str)
+        return res
+
+    def putSqlInsert(self, data):
+        sql_table_field = ''
+        sql_table_value = ''
+        for title in data:
+            sql = "'{res_data}', ".format(res_data=data[title])
+            sql_filed = "{title},".format(title=title)
+            sql_table_field = sql_table_field + sql_filed
+            sql_table_value = sql_table_value + sql
+        sql_table_field = sql_table_field[:-1]
+        sql_table_value = sql_table_value[:-2]
+
+        return {'field': sql_table_field, 'value': sql_table_value}
+
+    def insertNewScore(self, data):
+        field_data = self.putSqlInsert(data)
+        sql_table = "INSERT INTO grade("
+        sql_values = ")VALUES("
+        sql_str = sql_table + field_data['field'] + sql_values + field_data['value'] + ")"
+        res = self.exec(sql_str)
+
         return res
 
     def insertSchedule(self, year, term, day, lesson, classroom, data):

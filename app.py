@@ -406,21 +406,59 @@ def user_untying():
     return jsonify({'code': 0})
 
 
+@app.route('/update_score')
+def update_score():
+    token = request.cookies.get('token')
+    if not token:
+        return jsonify({
+            'code': 2,
+        })
+    else:
+        sr = RedisUse()
+        openid = sr.getTokenOpenid(token)
+        if not openid:
+            return jsonify({
+                'code': 2,
+            })
+        db = MysqlUse()
+        use = UseApply()
+        num = db.selectStudentMessage('openid', openid)
+        num = num[0]
+        res = use.updateScoreInformation(num[1], num[2])
+        if 'error' in res:
+            return {'code': 1, 'msg': res}
+        return jsonify({'code': 0, 'data': res})
+
+
 @app.route('/test', methods=['POST', 'GET'])
 def test():
-    # db = MysqlUse()
-    # use = UseApply()
-    # all_student = db.selectStudentMessage()
-    # for num in all_student:
-    #     # print(num[0], num[1], num[2], num[8])
-    #     res = use.updateSechdeuleinformation(num[1], num[2], num[8])
-    return jsonify(1)
+    # token = request.cookies.get('token')
+    # if not token:
+    #     return jsonify({
+    #         'code': 2,
+    #     })
+    # else:
+    #     sr = RedisUse()
+    #     openid = sr.getTokenOpenid(token)
+    #     if not openid:
+    #         return jsonify({
+    #             'code': 2,
+    #         })
+        openid = 'oUasBj0mgppfweCnYYDzEKPuKIq8'
+        db = MysqlUse()
+        use = UseApply()
+        num = db.selectStudentMessage('openid', openid)
+        num = num[0]
+        res = use.updateScoreInformation(num[1], num[2])
+        if 'error' in res:
+            return {'code': 1, 'msg': res}
+        return jsonify({'code': 0, 'data': res})
 
 
 @app.route('/hello', methods=['GET'])
 def hello():
     sch = SchoolApiGet()
-    res = sch.get_schedule_info('20173250131', '350426yyq', '2019-2020', 1)
+    res = sch.get_score_info('20173250131', '350426yyq')
     return jsonify(res)
 
 
