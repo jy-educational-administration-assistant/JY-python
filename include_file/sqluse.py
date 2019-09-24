@@ -167,3 +167,11 @@ class MysqlUse(object):
         sql_str = "SELECT * FROM course WHERE `school_year` = '{year}' AND `term` = '{term}' AND  `classroom` = '{classroom}'".format(year=year, term=term, classroom=classroom)
         res = self.query(sql_str)
         return res
+
+    def validateSchedule(self, data):
+        sql_where = self.putSqlWhereField(data)
+        sql_table = "SELECT * FROM course WHERE "
+        sql_str = sql_table + sql_where
+        res = self.query(sql_str)
+
+        return res

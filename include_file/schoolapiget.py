@@ -45,9 +45,8 @@ class SchoolApiGet(object):
         else:
             return False
 
-    def get_schedule_info(self, account, password, schedule_year, schedule_term, schedule_type=1):
+    def get_schedule_info(self, account, password, schedule_year=0, schedule_term=0, schedule_type=1):
         user = school.user_login(account, password)
         schedule_data = user.get_schedule(schedule_year, schedule_term, schedule_type)
-        # print(account, password, schedule_data)
 
         return schedule_data

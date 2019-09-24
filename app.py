@@ -330,8 +330,6 @@ def user_binding():
         times = times[0]
         account = request.form.get('account')
         password = request.form.get('password')
-        # account = request.args.get('account')
-        # password = request.args.get('password')
         res = sch.validate_user(account, password)
         if res:
             return jsonify(res)
@@ -430,26 +428,50 @@ def update_score():
         return jsonify({'code': 0, 'data': res})
 
 
+@app.route('/update_schedule')
+def update_schedule():
+    token = request.cookies.get('token')
+    if not token:
+        return jsonify({
+            'code': 2,
+        })
+    else:
+        sr = RedisUse()
+        openid = sr.getTokenOpenid(token)
+        if not openid:
+            return jsonify({
+                'code': 2,
+            })
+    db = MysqlUse()
+    use = UseApply()
+    num = db.selectStudentMessage('openid', openid)
+    num = num[0]
+    res = use.updateScheduleInformation(num[1], num[2], num[8])
+    if 'error' in res:
+        return {'code': 1, 'msg': res}
+    return jsonify({'code': 0, 'data': res})
+
+
+@app.route('/validate_student', methods=['POST', 'GET'])
+def validate_student():
+    sch = SchoolApiGet()
+    account = request.form.get('account')
+    password = request.form.get('password')
+    res = sch.validate_user(account, password)
+    if res:
+        return jsonify(res)
+    else:
+        return jsonify({'code': 0})
+
+
 @app.route('/test', methods=['POST', 'GET'])
 def test():
-    # token = request.cookies.get('token')
-    # if not token:
-    #     return jsonify({
-    #         'code': 2,
-    #     })
-    # else:
-    #     sr = RedisUse()
-    #     openid = sr.getTokenOpenid(token)
-    #     if not openid:
-    #         return jsonify({
-    #             'code': 2,
-    #         })
-        openid = 'oUasBj0mgppfweCnYYDzEKPuKIq8'
+        openid = 'oUasBj22KcIS113nNg788L85DGp4'
         db = MysqlUse()
         use = UseApply()
         num = db.selectStudentMessage('openid', openid)
         num = num[0]
-        res = use.updateScoreInformation(num[1], num[2])
+        res = use.updateScheduleInformation(num[1], num[2], num[8])
         if 'error' in res:
             return {'code': 1, 'msg': res}
         return jsonify({'code': 0, 'data': res})
@@ -458,7 +480,7 @@ def test():
 @app.route('/hello', methods=['GET'])
 def hello():
     sch = SchoolApiGet()
-    res = sch.get_score_info('20173250131', '350426yyq')
+    res = sch.get_schedule_info('20173250131', '350426yyq')
     return jsonify(res)
 
 

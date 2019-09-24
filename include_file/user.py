@@ -189,3 +189,31 @@ class UseApply(object):
             return {'isScore': 0, 'update': update_score_data}
         else:
             return {'isScore': 1}
+
+    def updateScheduleInformation(self, account, password, classroom):
+        db = MysqlUse()
+        sch = SchoolApiGet()
+        i = 0
+        schedule_data = sch.get_schedule_info(account, password)
+        while 'schedule' not in schedule_data:
+            res_schedule = sch.get_schedule_info(account, password)
+            i = i + 1
+            if i >= 4:
+                return res_schedule
+        sel_schedule = {
+            'classroom': classroom,
+            'school_year': schedule_data['schedule_year'],
+            'term': schedule_data['schedule_term'],
+        }
+        validate_schedule = db.validateSchedule(sel_schedule)
+        if validate_schedule:
+            return {'isSchedule': 1}
+        else:
+            for day in range(len(schedule_data['schedule'])):
+                for lesson in range(len(schedule_data['schedule'][day])):
+                    for x in range(len(schedule_data['schedule'][day][lesson])):
+                        res_sql = db.insertSchedule(schedule_data['schedule_year'], schedule_data['schedule_term'], day,
+                                                    lesson, classroom, schedule_data['schedule'][day][lesson][x])
+                        if not res_sql:
+                            return False
+            return {'isSchedule': 0}
