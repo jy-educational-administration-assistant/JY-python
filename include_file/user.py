@@ -151,8 +151,12 @@ class UseApply(object):
                     insert_data.append(k)
                     if 'bkcj' not in k.keys():
                         k['make_up_score'] = '0'
+                    else:
+                        k['make_up_score'] = k.pop('bkcj')
                     if 'cxcj' not in k.keys():
                         k['rebuild_score'] = '0'
+                    else:
+                        k['rebuild_score'] = k.pop('cxcj')
                     k['usual_score'] = k.pop('peace_score')
                     k['account'] = account
                     k['type'] = k.pop('lesson_nature')
