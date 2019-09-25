@@ -107,15 +107,13 @@ class UseApply(object):
                 'point': data[x][7],
                 'peace_score': data[x][8],
                 'term_end_score': data[x][9],
-                # 'make_up_score': data[x][10],
-                # 'rebuild_score': data[x][11],
                 'all_score': data[x][12],
                 'teach_college': data[x][13],
             }
             if data[x][10]:
-                data_res['make_up_score'] = data_res[x][10]
+                data_res['make_up_score'] = data[x][10]
             elif data[x][11]:
-                data_res['rebuild_score'] = data_res[x][11]
+                data_res['rebuild_score'] = data[x][11]
             res_score.append(data_res)
 
         return res_score
@@ -204,6 +202,8 @@ class UseApply(object):
             i = i + 1
             if i >= 4:
                 return res_schedule
+        if not schedule_data['schedule']:
+            return {'isScore': 1}
         sel_schedule = {
             'classroom': classroom,
             'school_year': schedule_data['schedule_year'],
@@ -216,8 +216,16 @@ class UseApply(object):
             for day in range(len(schedule_data['schedule'])):
                 for lesson in range(len(schedule_data['schedule'][day])):
                     for x in range(len(schedule_data['schedule'][day][lesson])):
-                        res_sql = db.insertSchedule(schedule_data['schedule_year'], schedule_data['schedule_term'], day,
-                                                    lesson, classroom, schedule_data['schedule'][day][lesson][x])
+                        res_sql = db.insertSchedule(schedule_data['schedule_year'], schedule_data['schedule_term'], day, lesson, classroom, schedule_data['schedule'][day][lesson][x])
                         if not res_sql:
                             return False
-            return {'isSchedule': 0}
+            sel_schedule = {
+                'classroom': classroom,
+                'school_year': schedule_data['schedule_year'],
+                'term': schedule_data['schedule_term'],
+            }
+            res_select = db.validateSchedule(sel_schedule)
+            if not res_select:
+                return {'isSchedule': 1}
+            else:
+                return {'isSchedule': 0}

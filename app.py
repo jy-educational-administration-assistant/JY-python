@@ -14,6 +14,7 @@ app = Flask(__name__)
 url = 'http://jws.qihaoyu.tech'
 
 
+# 获取学生基本信息
 @app.route('/get_student_info')
 def get_student_info():
     token = request.cookies.get('token')
@@ -78,6 +79,7 @@ def get_student_info():
                 return jsonify(data)
 
 
+# 获取学生的所有成绩
 @app.route('/get_score')
 def get_score():
     token = request.cookies.get('token')
@@ -164,6 +166,7 @@ def get_score():
                 return jsonify(data)
 
 
+# 获取学生的课表
 @app.route('/get_schedule')
 def get_schedule():
     token = request.cookies.get('token')
@@ -213,6 +216,7 @@ def get_schedule():
             return jsonify(data)
 
 
+# 请求微信接口
 @app.route('/set_code')
 def set_code():
     pre_url = 'http://m.hebiace.net/app/wxGetUserInfo/getUserInfo.php'
@@ -223,6 +227,7 @@ def set_code():
     return redirect(weixin)
 
 
+# 获取返回的openid
 @app.route('/get_code')
 def get_code():
         openid = request.args.get('openid')
@@ -264,6 +269,7 @@ def get_code():
             redirect(again_url)
 
 
+# 用户登陆接口
 @app.route('/user_login')
 def user_login():
     sr = RedisUse()
@@ -309,7 +315,7 @@ def user_login():
             }
             return jsonify(data)
 
-
+# 用户绑定接口
 @app.route('/user_binding', methods=['POST', 'GET'])
 def user_binding():
     token = request.cookies.get('token')
@@ -379,7 +385,7 @@ def user_binding():
                     }
                     return jsonify(data)
 
-
+# 用户解绑接口
 @app.route('/user_untying')
 def user_untying():
     sr = RedisUse()
@@ -403,7 +409,7 @@ def user_untying():
         return jsonify({'code': 1, 'msg': 'sql错误，请联系管理员'})
     return jsonify({'code': 0})
 
-
+# 更新成绩接口
 @app.route('/update_score')
 def update_score():
     token = request.cookies.get('token')
@@ -427,7 +433,7 @@ def update_score():
             return {'code': 1, 'msg': res}
         return jsonify({'code': 0, 'data': res})
 
-
+# 更新课表接口
 @app.route('/update_schedule')
 def update_schedule():
     token = request.cookies.get('token')
@@ -452,6 +458,7 @@ def update_schedule():
     return jsonify({'code': 0, 'data': res})
 
 
+# 验证学生接口
 @app.route('/validate_student', methods=['POST', 'GET'])
 def validate_student():
     sch = SchoolApiGet()
