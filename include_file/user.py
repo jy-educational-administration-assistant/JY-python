@@ -137,6 +137,8 @@ class UseApply(object):
                 for res in value_data:
                     res['year'] = key_year
                     res['term'] = key_term
+                    res['term_end_score'] = str(res['term_end_score'])
+                    res['peace_score'] = str(res['peace_score'])
                     data_school.append(res)
         sel_data = {
             'account': account
@@ -162,8 +164,11 @@ class UseApply(object):
                     res_insert = db.insertNewScore(k)
                     if not res_insert:
                         return {'error': res_insert}
+            res_pjzjd = db.updateStudentMessage('account', account, 'all_point', school_data['all_college']['pjzjd'])
+            if not res_pjzjd:
+                return {'error': res_pjzjd}
             if insert_data:
-                return {'isScore': 0, 'insert': insert_data}
+                return {'isScore': 0, 'insert': insert_data, 'point': school_data['all_college']['pjzjd']}
             else:
                 return {'isScore': 1}
         else:
@@ -187,8 +192,11 @@ class UseApply(object):
                     i['year'] = query_obj['year']
                     i['change'] = j['change']
                     update_score_data.append(i)
+        res_pjzjd = db.updateStudentMessage('account', account, 'all_point', school_data['all_college']['pjzjd'])
+        if not res_pjzjd:
+            return {'error': res_pjzjd}
         if update_score_data:
-            return {'isScore': 0, 'update': update_score_data}
+            return {'isScore': 0, 'update': update_score_data, 'point': school_data['all_college']['pjzjd']}
         else:
             return {'isScore': 1}
 
@@ -216,7 +224,8 @@ class UseApply(object):
             for day in range(len(schedule_data['schedule'])):
                 for lesson in range(len(schedule_data['schedule'][day])):
                     for x in range(len(schedule_data['schedule'][day][lesson])):
-                        res_sql = db.insertSchedule(schedule_data['schedule_year'], schedule_data['schedule_term'], day, lesson, classroom, schedule_data['schedule'][day][lesson][x])
+                        res_sql = db.insertSchedule(schedule_data['schedule_year'], schedule_data['schedule_term'], day,
+                                                    lesson, classroom, schedule_data['schedule'][day][lesson][x])
                         if not res_sql:
                             return False
             sel_schedule = {

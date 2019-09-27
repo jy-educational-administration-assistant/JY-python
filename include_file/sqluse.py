@@ -84,7 +84,7 @@ class MysqlUse(object):
                 data['bkcj'] = '0'
             if 'cxcj' not in data.keys():
                     data['cxcj'] = '0'
-            sql_str = "INSERT INTO grade(account,term,year,code,lesson_name,type,credit,point,usual_score,term_end_score,make_up_score,rebuild_score,all_score,teach_college)VALUES('{account}','{term}','{year}','{code}','{lesson_name}','{type}','{credit}','{point}','{usual_score}','{term_end_score}','{make_up_score}','{rebuild_score}','{all_score}','{teach_college}')".format(account=account, year=year, term=term, code=data['lesson_code'], lesson_name=data['lesson_name'], credit=data['credit'], point=data['point'], all_score=data['all_score'], usual_score=data['peace_score'], term_end_score=data['term_end_score'], type=data['lesson_nature'], make_up_score=data['bkcj'], rebuild_score=data['cxcj'], teach_college=data['teach_college'])
+            sql_str = "INSERT INTO grade(account,term,year,code,lesson_name,type,credit,point,usual_score,term_end_score,make_up_score,rebuild_score,all_score,teach_college)VALUES('{account}','{term}','{year}','{code}','{lesson_name}','{type}','{credit}','{point}','{usual_score}','{term_end_score}','{make_up_score}','{rebuild_score}','{all_score}','{teach_college}')".format(account=account, year=year, term=term, code=data['lesson_code'], lesson_name=data['lesson_name'], credit=data['credit'], point=data['point'], all_score=data['all_score'], usual_score=str(data['peace_score']), term_end_score=str(data['term_end_score']), type=data['lesson_nature'], make_up_score=data['bkcj'], rebuild_score=data['cxcj'], teach_college=data['teach_college'])
             self.cur.execute('SET character_set_connection=utf8;')
             res = self.exec(sql_str)
             return res

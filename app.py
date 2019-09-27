@@ -94,6 +94,7 @@ def get_score():
             return jsonify({
                 'code': 2,
             })
+        openid = 'oUasBj22KcIS113nNg788L85DGp4'
         db = MysqlUse()
         sch = SchoolApiGet()
         use = UseApply()
@@ -432,6 +433,7 @@ def update_score():
         if 'error' in res:
             return {'code': 1, 'msg': res}
         return jsonify({'code': 0, 'data': res})
+
 
 # 更新课表接口
 @app.route('/update_schedule')
