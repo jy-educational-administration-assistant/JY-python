@@ -7,8 +7,7 @@ from include_file.weixin import WeChat
 from include_file.user import UseApply
 import hashlib
 import time
-import json
-
+# import json
 
 app = Flask(__name__)
 url = 'http://jws.qihaoyu.tech'
@@ -94,7 +93,6 @@ def get_score():
             return jsonify({
                 'code': 2,
             })
-        openid = 'oUasBj22KcIS113nNg788L85DGp4'
         db = MysqlUse()
         sch = SchoolApiGet()
         use = UseApply()
@@ -150,11 +148,11 @@ def get_score():
                 return jsonify(data)
             else:
                 school_data = sch.get_score_info(account, password)
-                res_allcollege_point = db.updateStudentMessage('account', account, 'all_point', school_data['all_college']['pjzjd'])
-                if not res_allcollege_point:
+                res_all_college_point = db.updateStudentMessage('account', account, 'all_point', school_data['all_college']['pjzjd'])
+                if not res_all_college_point:
                     return jsonify({'code': 1, 'msg': 'sql数据库错误'})
-                res_allcollege_major_num = db.updateStudentMessage('account', account, 'major_number', school_data['all_college']['zyzrs'])
-                if not res_allcollege_major_num:
+                res_all_college_major_num = db.updateStudentMessage('account', account, 'major_number', school_data['all_college']['zyzrs'])
+                if not res_all_college_major_num:
                     return jsonify({'code': 1, 'msg': 'sql数据库错误'})
                 sql_res_score = db.selectScore(account, data_query_score)
                 sql_res_point = db.selectStudentMessage('account', account)
@@ -182,6 +180,7 @@ def get_schedule():
             return jsonify({
                 'code': 2,
             })
+    #     openid = 'oUasBj22KcIS113nNg788L85DGp4'
         schedule_year = request.args.get('year')
         schedule_term = request.args.get('term')
         if schedule_term is None or schedule_year is None:
@@ -316,6 +315,7 @@ def user_login():
             }
             return jsonify(data)
 
+
 # 用户绑定接口
 @app.route('/user_binding', methods=['POST', 'GET'])
 def user_binding():
@@ -386,18 +386,20 @@ def user_binding():
                     }
                     return jsonify(data)
 
+
 # 用户解绑接口
 @app.route('/user_untying')
 def user_untying():
     sr = RedisUse()
     db = MysqlUse()
-    token = request.cookies.get('token')
-    if not token:
-        return jsonify({
-            'code': 2,
-        })
-    else:
-        openid = sr.getTokenOpenid(token)
+    # token = request.cookies.get('token')
+    # if not token:
+    #     return jsonify({
+    #         'code': 2,
+    #     })
+    # else:
+    #     openid = sr.getTokenOpenid(token)
+    openid = 'oUasBj22KcIS113nNg788L85DGp4'
     if not openid:
         return jsonify({
             'code': 2,
@@ -409,6 +411,7 @@ def user_untying():
     if not res_untying:
         return jsonify({'code': 1, 'msg': 'sql错误，请联系管理员'})
     return jsonify({'code': 0})
+
 
 # 更新成绩接口
 @app.route('/update_score')
@@ -496,14 +499,14 @@ def hello():
 @app.route('/test_set_cookie', methods=['GET'])
 def test_set_cookie():
     resp = make_response()
-    resp.set_cookie('passwd', '1595995')
+    resp.headers['passwd'] = '1595995'
     return resp
 
 
 @app.route('/test_get_cookie', methods=['GET'])
 def test_get_cookie():
-    name = request.cookies.get('password')
-    return name
+    name = request.headers.get('passwd')
+    return jsonify(name)
 
 
 if __name__ == '__main__':

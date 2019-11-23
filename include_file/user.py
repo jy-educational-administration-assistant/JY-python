@@ -76,7 +76,7 @@ class UseApply(object):
             if weeks_arr:
                 weeks_arr = weeks_arr.split('[')
                 weeks_arr = weeks_arr[1].split(']')
-                weeks_arr = weeks_arr[0].split(',')
+                weeks_arr = weeks_arr[0].split(', ')
             data_res = {
                 'name': data[x][0],
                 'place': data[x][1],

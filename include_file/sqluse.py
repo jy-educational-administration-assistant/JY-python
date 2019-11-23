@@ -49,13 +49,13 @@ class MysqlUse(object):
         return res
 
     def untyingStudent(self, query_title, query_object):
-        sql_str = "UPDATE student SET `account` = NULL ,`password` = NULL ,`college` = NULL ,`major` = NULL ,`full_name` = NULL ,`classroom` = NULL ,`all_point` = NULL ,`major_number` = NULL WHERE `{query_title}` = '{query_object}'".format(query_title=query_title,query_object=query_object)
+        sql_str = "UPDATE student SET `password` = NULL ,`college` = NULL ,`major` = NULL ,`full_name` = NULL ,`classroom` = NULL ,`all_point` = NULL ,`major_number` = NULL WHERE `{query_title}` = '{query_object}'".format(query_title=query_title,query_object=query_object)
         res = self.exec(sql_str)
 
         return res
 
     def selectStudentMessage(self, query_title, query_object):
-        sql_str = "SELECT * FROM student WHERE `{query_title}` = '{query_object}'".format(query_title=query_title, query_object=query_object,)
+        sql_str = "SELECT * FROM student WHERE `{query_title}` = '{query_object}'".format(query_title=query_title, query_object=query_object)
         res = self.query(sql_str)
 
         return res
